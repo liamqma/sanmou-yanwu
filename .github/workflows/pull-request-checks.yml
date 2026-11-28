@@ -68,9 +68,6 @@ jobs:
               web/public/game-data/database.json)
                 data=true
                 ;;
-              web/src/recommendation_data.json)
-                data=true
-                ;;
               web/migrations/*.sql)
                 data=true
                 ;;

@@ -143,8 +143,9 @@ test.describe('local game-card presentation', () => {
       'rgba(7, 193, 96, 0.08)'
     );
 
+    // The image waits for the lineup model's recommendation.
     await shareButton.click();
-    await expect(page.getByText('图片已复制，可粘贴到微信')).toBeVisible();
+    await expect(page.getByText('图片已复制，可粘贴到微信')).toBeVisible({ timeout: 60000 });
     await expect.poll(() => page.evaluate(() => window.__roundShareCopy)).toMatchObject({
       type: 'image/png',
       width: 1200,
@@ -164,7 +165,7 @@ test.describe('local game-card presentation', () => {
     await page.getByRole('button', { name: '复制给微信好友' }).click();
 
     const dialog = page.getByRole('dialog', { name: '发送到微信' });
-    await expect(dialog).toBeVisible();
+    await expect(dialog).toBeVisible({ timeout: 60000 });
     const preview = dialog.getByRole('img', {
       name: '本轮候选组与当前阵容分享图片预览',
     });
@@ -185,52 +186,50 @@ test.describe('local game-card presentation', () => {
   test('preserves the selected group and offers while a support change finishes rescoring', async ({ page }) => {
     await seedGame(page, roundState(), roundInputs());
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-    await expect(page.getByTestId('option-score-0')).toBeVisible();
+    await expect(page.getByTestId('option-score-0')).toBeVisible({ timeout: 60000 });
     await page.getByRole('button', { name: '选择本组' }).first().click();
-
-    const before = await page.evaluate(() => JSON.parse(window.sanmouDebug()));
-    expect(before.status).toBe('ready');
+    const offered = () =>
+      page.locator('[data-testid="analysis-set-card"] [data-testid^="game-card-hero-"]').evaluateAll(
+        (cards) => cards.map((card) => card.getAttribute('data-testid'))
+      );
+    const strengths = () => page.locator('[data-testid^="option-strengths-"]').allTextContents();
+    const offeredBefore = await offered();
+    const strengthsBefore = await strengths();
+    expect(offeredBefore).toHaveLength(6);
 
     await page.evaluate(() => {
-      const status = { sawProgress: false };
+      const status = { sawRescore: false };
       const scan = () => {
-        if (document.querySelector('[role="progressbar"]')) {
-          status.sawProgress = true;
-        }
+        if (document.body.textContent.includes('分析中')) status.sawRescore = true;
       };
       scan();
       const observer = new MutationObserver(scan);
-      observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
       window.__supportRescoreStatus = { observer, status };
     });
 
     await page.getByRole('button', { name: '推荐支援武将' }).click();
     const dialog = page.getByRole('dialog', { name: '推荐支援武将' });
-    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('推荐武将：')).toBeVisible({ timeout: 60000 });
     await dialog.getByRole('button', { name: '设为支援武将' }).click();
 
     await expect
-      .poll(() =>
-        page.evaluate(() => window.__supportRescoreStatus.status.sawProgress)
-      )
+      .poll(() => page.evaluate(() => window.__supportRescoreStatus.status.sawRescore))
       .toBe(true);
-    await expect(page.getByRole('progressbar')).toHaveCount(0);
+    await expect(page.getByText('分析中')).toHaveCount(0, { timeout: 60000 });
     await expect(page.getByRole('button', { name: '已选' })).toHaveCount(1);
     await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(2);
     await expect(
       page.getByRole('button', { name: '确认选择并进入下一轮' })
     ).toBeEnabled();
+    await page.evaluate(() => window.__supportRescoreStatus.observer.disconnect());
 
-    const after = await page.evaluate(() => {
-      window.__supportRescoreStatus.observer.disconnect();
-      return JSON.parse(window.sanmouDebug());
-    });
-    expect(after.status).toBe('ready');
-    expect(after.input.current_pool.support_hero).toBeTruthy();
-    expect(after.input.offered_sets).toEqual(before.input.offered_sets);
-    expect(after.options.map((option) => option.display_score)).not.toEqual(
-      before.options.map((option) => option.display_score)
-    );
+    await expect(
+      page.getByRole('region', { name: '当前阵容' }).getByText('★ 支援', { exact: true })
+    ).toHaveCount(1);
+    expect(await offered()).toEqual(offeredBefore);
+    // The extra hero changes the lineups the three sets lead to.
+    expect(await strengths()).not.toEqual(strengthsBefore);
   });
 
   test('uses the named local fallback when a card image fails', async ({ page }) => {

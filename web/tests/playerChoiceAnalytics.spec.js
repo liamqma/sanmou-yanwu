@@ -157,15 +157,10 @@ test('Analytics omits player-choice rankings for a schema-v2 artifact', async ({
   ).toBeVisible({ timeout: 15000 });
 
   await expect(page.getByTestId('player-choice-analytics')).toHaveCount(0);
-  const battleSection = page.getByTestId('battle-report-analytics');
-  await expect(battleSection).toBeVisible();
-  await expect(
-    battleSection.getByRole('heading', { name: '历史战报分析' })
-  ).toBeVisible();
-  await expect(battleSection).toContainText('所有结论都来自已记录的');
+  await expect(page.getByRole('status')).toHaveText('暂时没有可展示的匿名选项统计。');
 });
 
-test('Analytics separates battle reports and renders full scrollable telemetry rankings', async ({
+test('Analytics renders full scrollable telemetry rankings and nothing from the old model', async ({
   page,
 }) => {
   const artifact = phaseThreeArtifact();
@@ -190,13 +185,8 @@ test('Analytics separates battle reports and renders full scrollable telemetry r
     '匿名选项统计汇总玩家使用本工具时的匿名选择'
   );
   await expect(section).not.toContainText('少于 10 次提供');
-  const battleSection = page.getByTestId('battle-report-analytics');
-  await expect(battleSection).toBeVisible();
-  await expect(
-    battleSection.getByRole('heading', { name: '历史战报分析' })
-  ).toBeVisible();
-  await expect(battleSection).toContainText('所有结论都来自已记录的');
-  await expect(section).not.toContainText('所有结论都来自已记录的');
+  await expect(page.getByTestId('battle-report-analytics')).toHaveCount(0);
+  await expect(page.getByText(/历史战报分析|模型权重/)).toHaveCount(0);
 
   const heroToggle = section.getByRole('button', { name: '武将' });
   const skillToggle = section.getByRole('button', { name: '战法' });

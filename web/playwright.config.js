@@ -2,7 +2,9 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
-  timeout: 60000,
+  // The lineup model searches in the browser; allow for slow CI machines.
+  timeout: 120000,
+  expect: { timeout: 15000 },
   use: {
     baseURL: 'http://localhost:3000',
   },

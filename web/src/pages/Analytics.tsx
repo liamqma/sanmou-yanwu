@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import {
   Container,
   Box,
@@ -13,34 +13,12 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Paper,
-  IconButton,
-  Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Button,
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import ClearIcon from '@mui/icons-material/Clear';
 import InsightsIcon from '@mui/icons-material/Insights';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import GroupsIcon from '@mui/icons-material/Groups';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import { api } from '../services/api';
-import { database } from '../data';
-import { heroRankingRank, skillRankingRank } from '../utils/rankings';
-import AutocompleteInput from '../components/common/AutocompleteInput';
-import TagList from '../components/common/TagList';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
 import PageIntro from '../components/common/PageIntro';
-import RelationshipRankingPanel from '../components/analytics/RelationshipRankingPanel';
-import type { HeroMeta, SkillMeta } from '../types/game';
-import type { AnalyticsResult } from '../services/recommendationEngine';
 import type { TelemetryData, TelemetryItemAggregate } from '../types/telemetryData';
 import { loadTelemetryData } from '../services/telemetryData';
 
@@ -72,32 +50,6 @@ const ScrollableAnalyticsTable = ({
       {children}
     </TableContainer>
   </>
-);
-
-const pct = (x: number | null | undefined): string =>
-  x == null ? '-' : `${(x * 100).toFixed(1)}%`;
-
-/**
- * Format a relative roster-strength contribution (a model coefficient, NOT a
- * percentage). Positive values get a leading '+' so players can read "helps"
- * vs "hurts" at a glance; the underlying value and precision are unchanged.
- */
-const fmtStrength = (x: number, dp = 3): string => {
-  const s = x.toFixed(dp);
-  return x > 0 ? `+${s}` : s;
-};
-
-/** Small keyboard/touch-accessible help affordance next to a label. */
-const HelpTip = ({ title, label }: { title: string; label: string }) => (
-  <Tooltip title={title} enterTouchDelay={0} leaveTouchDelay={4000}>
-    <IconButton
-      size="small"
-      aria-label={label}
-      sx={{ ml: 0.5, color: 'text.secondary' }}
-    >
-      <HelpOutlineIcon fontSize="inherit" />
-    </IconButton>
-  </Tooltip>
 );
 
 const telemetryPct = (
@@ -322,82 +274,17 @@ const TelemetryAnalyticsSection = ({
 };
 
 const Analytics = () => {
-  const data = useMemo<AnalyticsResult>(() => api.getAnalytics(), []);
   const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
-  const [selectedHeroes, setSelectedHeroes] = useState<string[]>([]);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-
-  const heroMetadata = useMemo<Record<string, HeroMeta>>(() => Object.fromEntries(
-    Object.entries(database.heroes || {}).map(([name, hero]) => [name, { ranking: hero.ranking }])
-  ), []);
-  const skillMetadata = useMemo<Record<string, SkillMeta>>(() => Object.fromEntries(
-    Object.entries(database.skills || {}).map(([name, skill]) => [name, {
-      ranking: skill.ranking,
-      category: skill.category,
-      season: skill.season,
-    }])
-  ), []);
-
-  // A skill is labelled 影 only with explicit evidence: source battle
-  // provenance (for example an upstream `影・` tactic) or catalog shadow
-  // metadata. Merely sharing a name with a hero's innate skill is insufficient.
-  const isShadowSkill = (skill: AnalyticsResult['skills'][number]): boolean =>
-    skill.shadowTotal > 0 || database.skills?.[skill.name]?.shadow === true;
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     void loadTelemetryData()
       .then(setTelemetry)
       .catch((telemetryError) => {
         console.warn('Player-choice telemetry is unavailable', telemetryError);
+        setUnavailable(true);
       });
   }, []);
-
-  const allHeroNames = useMemo(() => {
-    return data.heroes.map((h) => h.name).sort((a, b) => {
-      const ra = heroRankingRank(heroMetadata[a]?.ranking);
-      const rb = heroRankingRank(heroMetadata[b]?.ranking);
-      if (ra !== rb) return ra - rb;
-      return a.localeCompare(b, 'zh-Hans-CN');
-    });
-  }, [data, heroMetadata]);
-
-  const allSkillNames = useMemo(() => {
-    if (!data) return [];
-    return data.skills
-      .map((s) => s.name)
-      .sort((a, b) => {
-        const ra = skillRankingRank(skillMetadata[a]?.ranking);
-        const rb = skillRankingRank(skillMetadata[b]?.ranking);
-        if (ra !== rb) return ra - rb;
-        return a.localeCompare(b, 'zh-Hans-CN');
-      });
-  }, [data, skillMetadata]);
-
-  const heroFilterSet = new Set(selectedHeroes);
-  const skillFilterSet = new Set(selectedSkills);
-  const hasHeroFilter = selectedHeroes.length > 0;
-  const hasSkillFilter = selectedSkills.length > 0;
-
-  // Rank the individual hero/skill tables by fitted model weight descending,
-  // with deterministic tie-breakers (reference battles desc, then name). This is a
-  // display-only ordering; the underlying data.heroes/data.skills stay untouched.
-  const byStrength = <T extends { strength: number; total: number; name: string }>(a: T, b: T): number =>
-    b.strength - a.strength || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
-  // Ranks (排名) are always computed against the *full* sorted list so that when a
-  // search filter is applied the rows keep their true position (e.g. 排名 42) instead
-  // of restarting at 1. We build a name/label -> rank lookup from the full ordering,
-  // then filter for display without disturbing the rank shown per row.
-  const sortedHeroes = data.heroes.slice().sort(byStrength);
-  const sortedSkills = data.skills.slice().sort(byStrength);
-  const heroRankMap = new Map(sortedHeroes.map((h, i) => [h.name, i + 1]));
-  const skillRankMap = new Map(sortedSkills.map((s, i) => [s.name, i + 1]));
-  const heroUsageRankMap = new Map(data.hero_usage.map(([h], i) => [h, i + 1]));
-  const skillUsageRankMap = new Map(data.skill_usage.map(([s], i) => [s, i + 1]));
-  const filteredHeroes = hasHeroFilter ? sortedHeroes.filter((h) => heroFilterSet.has(h.name)) : sortedHeroes;
-  const filteredSkills = hasSkillFilter ? sortedSkills.filter((s) => skillFilterSet.has(s.name)) : sortedSkills;
-  const filteredHeroUsage = hasHeroFilter ? data.hero_usage.filter(([h]) => heroFilterSet.has(h)) : data.hero_usage;
-  const filteredSkillUsage = hasSkillFilter ? data.skill_usage.filter(([s]) => skillFilterSet.has(s)) : data.skill_usage;
-  const mq = data.model_quality;
 
   return (
     <Container maxWidth="xl" disableGutters>
@@ -405,385 +292,15 @@ const Analytics = () => {
         <PageIntro
           eyebrow="数据复盘"
           title="数据洞察"
-          description="先看玩家选择趋势，再用历史战报比较武将、战法与同队关系。"
-          actions={(
-            <Box
-              component="nav"
-              aria-label="数据洞察分区"
-              sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
-            >
-              {telemetry?.analytics && (
-                <Button
-                  component="a"
-                  href="#anonymous-choice-analytics"
-                  variant="contained"
-                  size="small"
-                >
-                  匿名选项统计
-                </Button>
-              )}
-              <Button
-                component="a"
-                href="#battle-report-analytics"
-                variant={telemetry?.analytics ? 'outlined' : 'contained'}
-                size="small"
-              >
-                历史战报分析
-              </Button>
-            </Box>
-          )}
+          description="看看游戏最常提供哪些武将、战法，以及玩家最常选择什么。"
         />
-
-        {telemetry?.analytics && (
+        {telemetry?.analytics ? (
           <TelemetryAnalyticsSection telemetry={telemetry} />
+        ) : (
+          <Typography variant="body2" color="text.secondary" role="status">
+            {unavailable || telemetry ? '暂时没有可展示的匿名选项统计。' : '正在载入匿名选项统计…'}
+          </Typography>
         )}
-
-        <Box
-          component="section"
-          id="battle-report-analytics"
-          aria-labelledby="battle-report-analytics-title"
-          data-testid="battle-report-analytics"
-          sx={{
-            pt: telemetry?.analytics ? 4 : 0,
-            borderTop: telemetry?.analytics ? '3px solid' : 0,
-            borderColor: 'divider',
-            scrollMarginTop: 24,
-          }}
-        >
-          <Typography variant="overline" color="error.main">
-            BATTLE ARCHIVE
-          </Typography>
-          <Typography
-            id="battle-report-analytics-title"
-            component="h2"
-            variant="h5"
-            gutterBottom
-          >
-            历史战报分析
-          </Typography>
-          <Typography variant="body1" color="text.secondary" paragraph>
-            这里帮你回答两个问题：<strong>哪些武将、战法更值得选</strong>，以及<strong>哪些搭配放在一起更好用</strong>。
-            所有结论都来自已记录的 {data.summary.total_battles} 场对局，是历史经验的参考，
-            <strong>并不保证</strong>在某一场对特定对手时一定获胜。
-          </Typography>
-
-          {/* Plain-language guide: how to read the numbers */}
-          <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'primary.main' }}>
-          <CardContent>
-            <Typography component="h3" variant="h6" gutterBottom>三步看懂这些数字</Typography>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography component="p" variant="subtitle2" gutterBottom>1. 模型权重</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  表示单个武将或战法对阵容相对强度的贡献。数值越高越值得优先考虑；它不是百分比，也不是单场胜负预测。
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography component="p" variant="subtitle2" gutterBottom>2. 组合分</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  仅用于下面的关系榜，表示武将同队、战法搭配、缘分或汇总机制关系带来的额外帮助。各关系类型独立排名，并与上面的单项模型权重分开计算。
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography component="p" variant="subtitle2" gutterBottom>3. 参考场次</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  这条结论背后有多少场对局。场次越多，通常说明证据越稳、越可信。
-                </Typography>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-
-        {/* Filters */}
-        <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 4, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
-            <Typography component="h3" variant="h6">只看我关心的武将和战法</Typography>
-            {(hasHeroFilter || hasSkillFilter) && (
-              <IconButton
-                size="small"
-                onClick={() => { setSelectedHeroes([]); setSelectedSkills([]); }}
-                title="清除所有筛选"
-                aria-label="清除所有筛选"
-              >
-                <ClearIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            输入你手上或想了解的武将、战法。单项和使用排名沿用全局筛选；关系榜只在所选身份对当前关系类型有明确含义时筛选，并会说明不适用的情况。
-          </Typography>
-          <Grid container spacing={2} sx={{ mb: 1 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <AutocompleteInput
-                items={allHeroNames}
-                selectedItems={selectedHeroes}
-                onAdd={(hero) => setSelectedHeroes([...selectedHeroes, hero])}
-                label="筛选武将"
-                placeholder="输入武将名或拼音..."
-                heroMetadata={heroMetadata}
-              />
-              {hasHeroFilter && (
-                <Box sx={{ mt: 1 }}>
-                  <TagList items={selectedHeroes} onRemove={(hero) => setSelectedHeroes(selectedHeroes.filter(h => h !== hero))} color="primary" heroMetadata={heroMetadata} />
-                </Box>
-              )}
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <AutocompleteInput
-                items={allSkillNames}
-                selectedItems={selectedSkills}
-                onAdd={(skill) => setSelectedSkills([...selectedSkills, skill])}
-                label="筛选战法"
-                placeholder="输入战法名或拼音..."
-                skillMetadata={skillMetadata}
-              />
-              {hasSkillFilter && (
-                <Box sx={{ mt: 1 }}>
-                  <TagList items={selectedSkills} onRemove={(skill) => setSelectedSkills(selectedSkills.filter(s => s !== skill))} color="secondary" skillMetadata={skillMetadata} />
-                </Box>
-              )}
-            </Grid>
-          </Grid>
-        </Paper>
-
-        {/* Section 1: who is worth picking */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-          <TrendingUpIcon sx={{ color: 'warning.main' }} />
-          <Typography component="h3" variant="h5">先看谁更值得选</Typography>
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          单个武将、战法按模型权重从高到低排名。想快速挑人挑战法，从这里开始。
-        </Typography>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h4" variant="h6">全部武将（按模型权重排序）</Typography>
-                </Box>
-                <ResponsiveDisclosure label="全部武将排名">
-                <ScrollableAnalyticsTable label="全部武将排名">
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>排名</TableCell>
-                        <TableCell>武将</TableCell>
-                        <TableCell align="right">模型权重</TableCell>
-                        <TableCell align="right">参考场次</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {filteredHeroes.map((h) => (
-                        <TableRow key={h.name}>
-                          <TableCell>{heroRankMap.get(h.name)}</TableCell>
-                          <TableCell><Chip label={h.name} color="primary" size="small" /></TableCell>
-                          <TableCell
-                            align="right"
-                            sx={{
-                              color: h.strength > 0 ? 'success.main' : h.strength < 0 ? 'error.main' : 'text.secondary',
-                              fontWeight: 'bold',
-                            }}
-                          >
-                            {fmtStrength(h.strength, 4)}
-                          </TableCell>
-                          <TableCell align="right">{h.total}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollableAnalyticsTable>
-                </ResponsiveDisclosure>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h4" variant="h6">全部战法（按模型权重排序）</Typography>
-                </Box>
-                <ResponsiveDisclosure label="全部战法排名">
-                <ScrollableAnalyticsTable label="全部战法排名">
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>排名</TableCell>
-                        <TableCell>战法</TableCell>
-                        <TableCell align="right">模型权重</TableCell>
-                        <TableCell align="right">参考场次</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {filteredSkills.map((s) => (
-                        <TableRow key={s.name}>
-                          <TableCell>{skillRankMap.get(s.name)}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={isShadowSkill(s) ? `影 · ${s.name}` : s.name}
-                              color="secondary"
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell
-                            align="right"
-                            sx={{
-                              color: s.strength > 0 ? 'success.main' : s.strength < 0 ? 'error.main' : 'text.secondary',
-                              fontWeight: 'bold',
-                            }}
-                          >
-                            {fmtStrength(s.strength, 4)}
-                          </TableCell>
-                          <TableCell align="right">{s.total}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollableAnalyticsTable>
-                </ResponsiveDisclosure>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Section 2: which combinations work well */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-          <GroupsIcon sx={{ color: 'info.main' }} />
-          <Typography component="h3" variant="h5">再看哪些搭配效果好</Typography>
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          已启用的关系各自按组合分排名：先选分组，再选具体关系类型，不会把不同模型家族混在一个总榜中。
-        </Typography>
-        <RelationshipRankingPanel
-          rankings={data.relationshipRankings}
-          enabledFamilies={data.enabledRelationshipFamilies}
-          selectedHeroes={selectedHeroes}
-          selectedSkills={selectedSkills}
-        />
-
-        {/* Section 3: what everyone uses */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-          <BarChartIcon sx={{ color: 'text.secondary' }} />
-          <Typography component="h3" variant="h5">看看大家常用什么</Typography>
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          出场次数最多的武将和战法。常用不一定最强，但能反映当前流行的选择。
-        </Typography>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Card>
-              <CardContent>
-                <Typography component="h4" variant="h6" gutterBottom>武将使用排行</Typography>
-                <ResponsiveDisclosure label="武将使用排行">
-                <ScrollableAnalyticsTable label="武将使用排行">
-                  <Table size="small" stickyHeader>
-                    <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell align="right">使用次数</TableCell></TableRow></TableHead>
-                    <TableBody>
-                      {filteredHeroUsage.map(([hero, count]) => (
-                        <TableRow key={hero}>
-                          <TableCell>{heroUsageRankMap.get(hero)}</TableCell>
-                          <TableCell><Chip label={hero} color="primary" size="small" /></TableCell>
-                          <TableCell align="right">{count}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollableAnalyticsTable>
-                </ResponsiveDisclosure>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Card>
-              <CardContent>
-                <Typography component="h4" variant="h6" gutterBottom>战法使用排行</Typography>
-                <ResponsiveDisclosure label="战法使用排行">
-                <ScrollableAnalyticsTable label="战法使用排行">
-                  <Table size="small" stickyHeader>
-                    <TableHead><TableRow><TableCell>排名</TableCell><TableCell>战法</TableCell><TableCell align="right">使用次数</TableCell></TableRow></TableHead>
-                    <TableBody>
-                      {filteredSkillUsage.map(([skill, count]) => (
-                        <TableRow key={skill}>
-                          <TableCell>{skillUsageRankMap.get(skill)}</TableCell>
-                          <TableCell><Chip label={skill} color="secondary" size="small" /></TableCell>
-                          <TableCell align="right">{count}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollableAnalyticsTable>
-                </ResponsiveDisclosure>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Section 4 (optional, collapsed): data & algorithm details */}
-        <Accordion
-          defaultExpanded={false}
-          slotProps={{ heading: { component: 'h3' } }}
-          sx={{ mb: 4 }}
-        >
-          <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
-            aria-controls="data-algo-details-content"
-            id="data-algo-details-header"
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <InsightsIcon sx={{ color: 'info.main' }} />
-              <Box>
-                <Typography component="span" variant="h6">数据与算法说明</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  选看内容：了解这些推荐有多可靠，不影响日常挑人挑战法。
-                </Typography>
-              </Box>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              推荐来自一个成对（对手感知）逻辑回归模型，并在按时间留出的一批对局上做过检验。
-              搭配榜里的“组合分”用来横向比较不同组合，<strong>不是</strong>对某个特定对手的获胜概率。
-            </Typography>
-
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography component="p" variant="subtitle2">预测准确率</Typography>
-                <HelpTip
-                  label="预测准确率说明"
-                  title="在模型没见过的历史对局上，它猜对胜负方的比例。"
-                />
-              </Box>
-              <Typography component="p" variant="h5">{pct(mq.accuracy)}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                作为对照，如果每次都猜更常赢的一方，正确率约为 {pct(mq.baseline_accuracy)}。
-                高于这个基线，说明模型确实学到了有用的规律。
-              </Typography>
-            </Box>
-
-            <Typography variant="overline" color="text.secondary">技术指标</Typography>
-            <Grid container spacing={2} sx={{ mt: 0 }}>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="overline" color="text.secondary">对数损失 (log loss)</Typography>
-                <Typography component="p" variant="h6">{mq.log_loss ?? '-'}</Typography>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="overline" color="text.secondary">Brier 分数</Typography>
-                <Typography component="p" variant="h6">{mq.brier ?? '-'}</Typography>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="overline" color="text.secondary">测试样本数</Typography>
-                <Typography component="p" variant="h6">{mq.n_test}</Typography>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="overline" color="text.secondary">特征数</Typography>
-                <Typography component="p" variant="h6">{mq.n_features}</Typography>
-              </Grid>
-            </Grid>
-          </AccordionDetails>
-          </Accordion>
-        </Box>
       </Box>
     </Container>
   );

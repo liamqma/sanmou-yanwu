@@ -196,7 +196,7 @@ test.describe('Accessibility and responsive layout', () => {
     ).toHaveCount(0);
   });
 
-  test('mobile round-one roster disclosure keeps its score attached and actions aligned', async ({
+  test('mobile round-one roster disclosure keeps its header on one line and actions aligned', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -221,25 +221,19 @@ test.describe('Accessibility and responsive layout', () => {
       level: 2,
       name: '当前阵容',
     });
-    const score = roster.getByTestId('current-roster-score');
     const season = roster.getByTestId('current-season-chip');
     await expect(heading).toBeVisible();
-    await expect(score).toHaveText(/评分 -?\d+\.\d/);
     await expect(season).toBeVisible();
     await expect(
       roster.getByText('CURRENT ROSTER', { exact: true }),
     ).toHaveCount(0);
 
-    const [headingBox, scoreBox, seasonBox] = await Promise.all([
+    const [headingBox, seasonBox] = await Promise.all([
       heading.boundingBox(),
-      score.boundingBox(),
       season.boundingBox(),
     ]);
     expect(headingBox).not.toBeNull();
-    expect(scoreBox).not.toBeNull();
     expect(seasonBox).not.toBeNull();
-    expect(Math.abs(headingBox.y - scoreBox.y)).toBeLessThanOrEqual(8);
-    expect(scoreBox.x - (headingBox.x + headingBox.width)).toBeLessThanOrEqual(10);
     expect(Math.abs(seasonBox.y - headingBox.y)).toBeLessThanOrEqual(8);
 
     const heroSupport = roster.getByRole('button', {
@@ -280,7 +274,6 @@ test.describe('Accessibility and responsive layout', () => {
     const roster = page.getByRole('region', { name: '当前阵容' });
     const controls = [
       roster.getByRole('heading', { level: 2, name: '当前阵容' }),
-      roster.getByTestId('current-roster-score'),
       roster.getByRole('button', { name: '编辑队伍' }),
       roster.getByTestId('current-season-chip'),
     ];
@@ -298,8 +291,8 @@ test.describe('Accessibility and responsive layout', () => {
       expect(box.x).toBeGreaterThanOrEqual(rosterBox.x - 1);
       expect(box.x + box.width).toBeLessThanOrEqual(rosterBox.x + rosterBox.width + 1);
     }
-    expect(boxes[2].width).toBeGreaterThanOrEqual(44);
-    expect(boxes[2].height).toBeGreaterThanOrEqual(44);
+    expect(boxes[1].width).toBeGreaterThanOrEqual(44);
+    expect(boxes[1].height).toBeGreaterThanOrEqual(44);
 
     const documentOverflow = await page.evaluate(() =>
       document.documentElement.scrollWidth - window.innerWidth
@@ -358,29 +351,24 @@ test.describe('Accessibility and responsive layout', () => {
     await seedGame(page, lateRoundState(), lateRoundInputs());
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
 
-    const firstDetails = page.getByRole('button', { name: '展开第1组详细分析' });
-    await expect(firstDetails).toBeVisible({ timeout: 15000 });
+    const firstDetails = page.getByRole('button', { name: '展开第1组选后阵容' });
+    await expect(firstDetails).toBeVisible({ timeout: 60000 });
     // Mobile keeps all three options in document order so the next group is
     // reached by normal vertical scrolling rather than a hidden tab state.
     await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(3);
     await expect(page.getByTestId('mobile-option-switcher')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '展开第2组详细分析' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '展开第3组详细分析' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '展开第2组选后阵容' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '展开第3组选后阵容' })).toBeVisible();
 
-    // Per-option 评分 stays visible without expanding; 火力 wording is gone.
+    // The verdict and the win rates stay visible without expanding.
     await expect(page.getByTestId('option-score-0')).toBeVisible();
-    await expect(page.getByText(/火力/)).toHaveCount(0);
+    await expect(page.getByTestId('option-strengths-0')).toBeVisible();
+    await expect(page.getByTestId('option-lineup').first()).not.toBeVisible();
 
-    // Expanding reveals the compact combination evidence (or its empty-state).
+    // Expanding reveals the lineup this set leads to.
     await firstDetails.click();
-    await expect(
-      page
-        .getByTestId('combination-evidence')
-        .or(page.getByText('暂无关键组合依据。'))
-        .first(),
-    ).toBeVisible();
-    await expect(page.getByText('推荐理由:')).toHaveCount(0);
-    await expect(page.getByText('可能减分项:')).toHaveCount(0);
+    await expect(page.getByTestId('option-lineup').first()).toBeVisible();
+    await expect(page.getByTestId('option-lineup').first()).toContainText('队伍一');
   });
 
   test('mobile analytics tables disclose into labelled keyboard-focusable regions', async ({ page }) => {
@@ -407,96 +395,18 @@ test.describe('Accessibility and responsive layout', () => {
         };
       })
     ).toEqual({ maxHeight: '520px', overflowY: 'auto' });
-
-    const disclosure = page.getByRole('button', { name: '展开全部武将排名' });
-    await expect(disclosure).toBeVisible({ timeout: 15000 });
-    await disclosure.click();
-
-    const tableRegion = page.getByRole('region', { name: '全部武将排名表格，可滚动' });
-    await expect(tableRegion).toBeVisible();
-    await expect(tableRegion).toHaveAttribute('tabindex', '0');
   });
 
-  test('analytics separates telemetry from the battle-report guide', async ({ page }) => {
+  test('analytics shows the anonymous choice statistics under one page heading', async ({ page }) => {
     await page.goto('/analytics');
 
-    // The single level-one heading is preserved.
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(page.getByRole('heading', { level: 1, name: '数据洞察' })).toBeVisible({ timeout: 15000 });
-
-    const telemetrySection = page.getByTestId('player-choice-analytics');
-    const battleSection = page.getByTestId('battle-report-analytics');
     await expect(
-      telemetrySection.getByRole('heading', {
-        level: 2,
-        name: '匿名选项统计',
-      })
+      page.getByTestId('player-choice-analytics').getByRole('heading', { level: 2, name: '匿名选项统计' })
     ).toBeVisible();
-    await expect(
-      battleSection.getByRole('heading', {
-        level: 2,
-        name: '历史战报分析',
-      })
-    ).toBeVisible();
-    await expect(telemetrySection).not.toContainText('所有结论都来自已记录的');
-    await expect(battleSection).toContainText('所有结论都来自已记录的');
-    expect(
-      await page.evaluate(() => {
-        const telemetryElement = document.querySelector(
-          '[data-testid="player-choice-analytics"]'
-        );
-        const battleElement = document.querySelector(
-          '[data-testid="battle-report-analytics"]'
-        );
-        return Boolean(
-          telemetryElement &&
-            battleElement &&
-            telemetryElement.compareDocumentPosition(battleElement) &
-              Node.DOCUMENT_POSITION_FOLLOWING
-        );
-      })
-    ).toBe(true);
-
-    // The battle-report section owns the guide to its three measures.
-    await expect(
-      battleSection.getByRole('heading', { name: '三步看懂这些数字' })
-    ).toBeVisible();
-    await expect(battleSection.getByText('模型权重')).not.toHaveCount(0);
-    await expect(battleSection.getByText('组合分')).not.toHaveCount(0);
-    await expect(battleSection.getByText('参考场次')).not.toHaveCount(0);
-    await expect(battleSection.getByText('胜率参考')).toHaveCount(0);
-
-    // Actionable sections come before the optional diagnostics section.
-    await expect(battleSection.getByRole('heading', { name: '先看谁更值得选' })).toBeVisible();
-    await expect(battleSection.getByRole('heading', { name: '再看哪些搭配效果好' })).toBeVisible();
-
-    // The action-oriented filter section replaces the old "筛选名册" wording.
-    await expect(battleSection.getByRole('heading', { name: '只看我关心的武将和战法' })).toBeVisible();
-  });
-
-  test('data-and-algorithm details start collapsed and expand by keyboard', async ({ page }) => {
-    await page.goto('/analytics');
-
-    const summary = page.getByRole('button', { name: /数据与算法说明/ });
-    await expect(summary).toBeVisible({ timeout: 15000 });
-
-    // Collapsed by default: the accordion summary reports aria-expanded=false and
-    // the technical details inside are not yet visible.
-    await expect(summary).toHaveAttribute('aria-expanded', 'false');
-    await expect(page.getByRole('heading', { level: 3, name: /数据与算法说明/ })).toBeVisible();
-    await expect(page.getByText('技术指标')).not.toBeVisible();
-    const detailsId = await summary.getAttribute('aria-controls');
-    expect(detailsId).toBeTruthy();
-    await expect(page.locator(`[id="${detailsId}"]`)).toHaveCount(1);
-
-    // Keyboard-accessible: focus and activate the summary to expand it.
-    await summary.focus();
-    await page.keyboard.press('Enter');
-    await expect(summary).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.getByText('技术指标')).toBeVisible();
-    const details = page.locator(`[id="${detailsId}"]`);
-    await expect(details.getByRole('heading')).toHaveCount(0);
-    // Original technical metrics remain available as non-heading text.
-    await expect(page.getByText(/对数损失/)).toBeVisible();
-    await expect(details.locator('h5, h6')).toHaveCount(0);
+    // The old model's battle-report half is gone.
+    await expect(page.getByTestId('battle-report-analytics')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /数据与算法说明/ })).toHaveCount(0);
   });
 });

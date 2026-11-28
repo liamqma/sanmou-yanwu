@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
-const { seedGame, makeGameState } = require('./helpers');
-const { model } = require('../src/recommendation_data.json');
+const { database, seedGame, makeGameState } = require('./helpers');
+const lineupModel = require('../public/game-data/lineup_model.json');
 
 const HEROES = ['刘备', '关羽', '张飞', '诸葛亮', '赵云', '马超', '曹操', '司马懿', '夏侯惇', '孙权', '周瑜', '陆逊', '吕布', '张辽', '貂蝉'];
 const SKILLS = [
@@ -158,25 +158,21 @@ test.describe('team builder', () => {
     await expect(builder.getByRole('button', { name: '队伍一第1位武将：空' })).toHaveCount(0);
   });
 
-  test('says so when nothing left fits', async ({ page }) => {
-    const pairId = (a, b) => `HP|${[a, b].sort().join('|')}`;
-    const spare = HEROES.find(
-      (hero) => HEROES.filter((other) => other !== hero && !(pairId(hero, other) in model.weights)).length >= 3
+  test('marks a card the lineup model has never seen', async ({ page }) => {
+    const unseen = Object.keys(database.heroes).find((hero) => !lineupModel.heroes.includes(hero));
+    test.skip(!unseen, 'the model knows every catalog hero');
+    // Four heroes all take the field, so the unseen one is placed.
+    await seedGame(
+      page,
+      makeGameState({ roundNumber: 1, heroes: [...HEROES.slice(0, 3), unseen], skills: SKILLS.slice(0, 8) }),
+      { set1: [], set2: [], set3: [] }
     );
-    const strangers = HEROES.filter((other) => other !== spare && !(pairId(spare, other) in model.weights)).slice(0, 3);
-    const heroes = [spare, ...strangers];
-    const empty = () => ({ hero: null, skills: [null, null] });
-    const layout = strangers.map((hero) => [{ hero, skills: [null, null] }, empty(), empty()]);
-    const poolKey = JSON.stringify([[...heroes].sort(), []]);
-    const stored = JSON.stringify({ version: 3, mode: 'manual', poolKey, layout });
-    await page.addInitScript((value) => localStorage.setItem('teamBuilder', value), stored);
-    await seedGame(page, makeGameState({ roundNumber: 10, heroes, skills: [] }), { set1: [], set2: [], set3: [] });
 
     const builder = page.getByRole('region', { name: '队伍编排' });
-    await expect(placedHeroCards(page)).toHaveCount(3);
-    await builder.getByRole('button', { name: '自动分配剩余格子' }).click();
-    await expect(builder.getByRole('status')).toHaveText('剩余卡片没有可用组合');
-    await expect(placedHeroCards(page)).toHaveCount(3);
+    await expect(placedHeroCards(page)).toHaveCount(4);
+    await expect(page.locator('[data-testid^="team-slot-skill-"]')).toHaveCount(8);
+    await expect(builder.getByLabel('模型没见过的卡')).toHaveCount(1);
+    await expect(builder.getByRole('note')).toContainText('按一张普通的未知卡估算');
   });
 
   test('uses the slot picker on mobile', async ({ page }) => {

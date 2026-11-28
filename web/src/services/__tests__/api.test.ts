@@ -1,7 +1,9 @@
 import { database } from '../../data';
 import { api } from '../api';
-import { clearTelemetryDataCacheForTests } from '../telemetryData';
+import { runLineup } from '../lineupClient';
 import { heroRankingRank, skillRankingRank } from '../../utils/rankings';
+
+vi.mock('../lineupClient', () => ({ runLineup: vi.fn() }));
 
 const compareChineseNames = (a: string, b: string): number =>
   a.localeCompare(b, 'zh-Hans-CN');
@@ -81,46 +83,41 @@ describe('database items', () => {
   });
 });
 
-describe('recommendation telemetry isolation', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    clearTelemetryDataCacheForTests();
-  });
+describe('recommendation', () => {
+  test('asks the lineup model about the whole pool and reports each gap to the best set', async () => {
+    vi.mocked(runLineup).mockResolvedValue({
+      version: '9:0123456789abcdef',
+      recommended: 1,
+      options: [-30, -28.5, -29].map((score) => ({ score, teams: [] })),
+      unknown: { heroes: ['丙'], skills: [] },
+    });
+    const sets = [['甲'], ['乙'], ['丙']];
 
-  test('a stalled telemetry artifact request never blocks the paired recommendation', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise<Response>(() => undefined))
+    const recommendation = await api.getRecommendation('hero', sets, {
+      current_heroes: ['主将'],
+      current_skills: ['主战法'],
+      support_hero: '支援将',
+      support_skills: ['支援战法'],
+      round_number: 4,
+      round_history: [],
+    });
+
+    expect(runLineup).toHaveBeenCalledWith(
+      'pick',
+      { heroes: ['主将', '支援将'], skills: ['主战法', '支援战法'], options: sets, kind: 'hero' },
+      undefined
     );
-    clearTelemetryDataCacheForTests();
-    const heroes = Object.keys(database.heroes);
-    const currentHeroes = heroes.slice(0, 4);
-    const candidates = heroes.slice(4, 13);
-
-    const completed = await Promise.race([
-      api
-        .getRecommendation(
-          'hero',
-          [
-            candidates.slice(0, 3),
-            candidates.slice(3, 6),
-            candidates.slice(6, 9),
-          ],
-          {
-            current_heroes: currentHeroes,
-            current_skills: [],
-            support_hero: null,
-            support_skills: [],
-            round_number: 1,
-            round_history: [],
-          }
-        )
-        .then(() => true),
-      new Promise<boolean>((resolve) => {
-        setTimeout(() => resolve(false), 100);
-      }),
+    expect(recommendation).toMatchObject({
+      recommended_set_index: 1,
+      recommended_set: ['乙'],
+      model_version: '9:0123456789abcdef',
+      unknown: { heroes: ['丙'], skills: [] },
+      round_info: { round_number: 4, round_type: 'hero' },
+    });
+    expect(recommendation.analysis.map(({ set_index, gap }) => [set_index, gap])).toEqual([
+      [0, -1.5],
+      [1, 0],
+      [2, -0.5],
     ]);
-
-    expect(completed).toBe(true);
   });
 });

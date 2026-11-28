@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import CurrentTeam from '../CurrentTeam';
@@ -15,27 +15,37 @@ const mocks = vi.hoisted(() => ({
     },
   },
   dispatch: vi.fn(),
-  recommendSingleHero: vi.fn(() => ({
-    hero: '曹操',
-    analysis: [],
-  })),
-  recommendTwoSkills: vi.fn(() => ({
-    skills: ['百战不殆', '坚壁清野'],
-    analysis: [],
-    pair: null,
-  })),
-  currentRosterScore: vi.fn(() => 12.3),
+  runLineup: vi.fn(),
 }));
 
 vi.mock('../../../context/GameContext', () => ({
   useGame: () => ({ state: mocks.state, dispatch: mocks.dispatch }),
 }));
 
-vi.mock('../../../services/recommendationEngine', () => ({
-  recommendSingleHero: mocks.recommendSingleHero,
-  recommendTwoSkills: mocks.recommendTwoSkills,
-  currentRosterScore: mocks.currentRosterScore,
+vi.mock('../../../services/lineupClient', () => ({
+  LineupSuperseded: class LineupSuperseded extends Error {},
+  runLineup: mocks.runLineup,
 }));
+
+interface SupportInput {
+  heroes: string[];
+  skills: string[];
+  kind: 'hero' | 'skill';
+  count: number;
+  candidates: string[];
+}
+
+const ranked = (cards: string[], score: number) => ({ cards, lineup: { score, teams: [] } });
+
+/** The model likes the first candidates best, one point apart. */
+const supportRanking = ({ count, candidates }: SupportInput) => ({
+  base: -30,
+  recommended: candidates.slice(0, count),
+  single: candidates.map((card, index) => ranked([card], -28 - index)),
+  pairs: count > 1 ? [ranked(candidates.slice(0, 2), -25)] : [],
+});
+
+const supportRequest = (call = 0): SupportInput => mocks.runLineup.mock.calls[call][1];
 
 const heroes = ['刘备', '关羽', '张飞', '赵云'];
 const skills = [
@@ -72,6 +82,9 @@ const team = (
 describe('CurrentTeam support actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.runLineup.mockImplementation((_task: string, input: SupportInput) =>
+      Promise.resolve(supportRanking(input))
+    );
     mocks.state.selectedSeason = 7;
     mocks.state.currentRoundInputs = { set1: [], set2: [], set3: [] };
   });
@@ -81,13 +94,7 @@ describe('CurrentTeam support actions', () => {
 
     expect(screen.getByText('武将 (4)', { exact: true })).toBeInTheDocument();
     expect(screen.getByText('战法 (8)', { exact: true })).toBeInTheDocument();
-    expect(mocks.currentRosterScore).toHaveBeenCalledWith(
-      heroes,
-      skills,
-      expect.anything(),
-    );
-    expect(mocks.recommendSingleHero).not.toHaveBeenCalled();
-    expect(mocks.recommendTwoSkills).not.toHaveBeenCalled();
+    expect(mocks.runLineup).not.toHaveBeenCalled();
 
     const heroAction = screen.getByRole('button', { name: '推荐支援武将' });
     const skillActions = screen.getAllByRole('button', { name: '推荐支援战法' });
@@ -100,19 +107,25 @@ describe('CurrentTeam support actions', () => {
     expect(screen.queryByTestId('game-card-tactic-坚壁清野')).not.toBeInTheDocument();
 
     rerender(team());
-    expect(mocks.recommendSingleHero).not.toHaveBeenCalled();
-    expect(mocks.recommendTwoSkills).not.toHaveBeenCalled();
+    expect(mocks.runLineup).not.toHaveBeenCalled();
   });
 
-  test('calculates a hero recommendation on click and allows selecting it', () => {
+  test('ranks support heroes on click and allows selecting the recommended one', async () => {
     render(team());
 
     fireEvent.click(screen.getByRole('button', { name: '推荐支援武将' }));
 
-    expect(mocks.recommendSingleHero).toHaveBeenCalledTimes(1);
-    expect(mocks.recommendTwoSkills).not.toHaveBeenCalled();
-    expect(screen.getByRole('dialog', { name: '推荐支援武将' })).toBeInTheDocument();
-    expect(screen.getByText('曹操', { exact: true })).toBeInTheDocument();
+    expect(mocks.runLineup).toHaveBeenCalledTimes(1);
+    expect(mocks.runLineup).toHaveBeenCalledWith(
+      'support',
+      { heroes, skills, kind: 'hero', count: 1, candidates: ['曹操', '孙权'] },
+      expect.any(Function),
+    );
+    const dialog = within(screen.getByRole('dialog', { name: '推荐支援武将' }));
+    expect(await dialog.findByText('曹操', { selector: 'strong' })).toBeInTheDocument();
+    // Each candidate shows how much it changes the lineup score.
+    expect(dialog.getByText('阵容评分 +2.0')).toBeInTheDocument();
+    expect(dialog.getByText('阵容评分 +1.0')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '设为支援武将' }));
     expect(mocks.dispatch).toHaveBeenCalledWith({
@@ -121,15 +134,35 @@ describe('CurrentTeam support actions', () => {
     });
   });
 
-  test('calculates tactic recommendations on click and allows selecting them', () => {
+  test('shows progress while ranking and reports a failure', async () => {
+    let fail!: (error: Error) => void;
+    mocks.runLineup.mockImplementation(
+      (_task: string, _input: SupportInput, onProgress: (progress: number) => void) => {
+        onProgress(0.42);
+        return new Promise((_resolve, reject) => {
+          fail = reject;
+        });
+      }
+    );
+    render(team());
+
+    fireEvent.click(screen.getByRole('button', { name: '推荐支援武将' }));
+    expect(screen.getByRole('status')).toHaveTextContent('正在逐个比较候选武将… 42%');
+    expect(screen.getByRole('button', { name: '设为支援武将' })).toBeDisabled();
+
+    await act(async () => fail(new Error('模型加载失败')));
+    expect(screen.getByRole('alert')).toHaveTextContent('推荐失败：模型加载失败');
+  });
+
+  test('ranks support tactics on click and allows selecting the recommended pair', async () => {
     render(team());
 
     fireEvent.click(screen.getAllByRole('button', { name: '推荐支援战法' })[0]);
 
-    expect(mocks.recommendTwoSkills).toHaveBeenCalledTimes(1);
-    expect(mocks.recommendSingleHero).not.toHaveBeenCalled();
+    expect(mocks.runLineup).toHaveBeenCalledTimes(1);
+    expect(supportRequest()).toMatchObject({ kind: 'skill', count: 2 });
     expect(screen.getByRole('dialog', { name: '推荐支援战法' })).toBeInTheDocument();
-    expect(screen.getByText('本次已选 2/2 个战法：')).toBeInTheDocument();
+    expect(await screen.findByText('本次已选 2/2 个战法：')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '设为支援战法' }));
     expect(mocks.dispatch).toHaveBeenCalledWith({
@@ -150,8 +183,7 @@ describe('CurrentTeam support actions', () => {
     expect(screen.getByText('战法 (9)', { exact: true })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '推荐支援武将' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '推荐支援战法' })).toHaveLength(1);
-    expect(mocks.recommendSingleHero).not.toHaveBeenCalled();
-    expect(mocks.recommendTwoSkills).not.toHaveBeenCalled();
+    expect(mocks.runLineup).not.toHaveBeenCalled();
 
     const [heroList, skillList] = screen.getAllByTestId('game-card-list');
     const firstHeroImage = within(heroList).getAllByRole('img')[0];
@@ -162,22 +194,19 @@ describe('CurrentTeam support actions', () => {
     expect(within(skillList).getByText('★ 支援', { exact: true })).toBeInTheDocument();
   });
 
-  test('fills only the open support tactic slot and preserves the confirmed tactic', () => {
-    mocks.recommendTwoSkills.mockReturnValueOnce({
-      skills: ['坚壁清野'],
-      analysis: [],
-      pair: null,
-    });
+  test('fills only the open support tactic slot and preserves the confirmed tactic', async () => {
     render(team({ supportSkills: ['百战不殆'] }));
 
     fireEvent.click(screen.getByRole('button', { name: '推荐支援战法' }));
-    expect(mocks.recommendTwoSkills).toHaveBeenCalledWith(
-      expect.any(Array),
-      expect.any(Array),
-      expect.any(Array),
-      expect.anything(),
-      1,
-    );
+    // The confirmed support tactic is part of the pool, not a candidate.
+    expect(supportRequest()).toEqual({
+      heroes,
+      skills: [...skills, '百战不殆'],
+      kind: 'skill',
+      count: 1,
+      candidates: ['坚壁清野', '清风驱疾'],
+    });
+    expect(await screen.findByText('本次已选 1/1 个战法：')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '设为支援战法' }));
     expect(mocks.dispatch).toHaveBeenCalledWith({
       type: 'SET_SUPPORT_SKILLS',
@@ -194,26 +223,14 @@ describe('CurrentTeam support actions', () => {
     render(team());
 
     fireEvent.click(screen.getByRole('button', { name: '推荐支援武将' }));
-    expect(mocks.recommendSingleHero).toHaveBeenCalledWith(
-      ['孙权'],
-      expect.any(Array),
-      expect.any(Array),
-      expect.anything(),
-      expect.anything(),
-    );
+    expect(supportRequest().candidates).toEqual(['孙权']);
     fireEvent.click(screen.getByRole('button', { name: '关闭' }));
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: '推荐支援武将' })).not.toBeInTheDocument()
     );
 
     fireEvent.click(screen.getAllByRole('button', { name: '推荐支援战法' })[0]);
-    expect(mocks.recommendTwoSkills).toHaveBeenCalledWith(
-      ['坚壁清野', '清风驱疾'],
-      expect.any(Array),
-      expect.any(Array),
-      expect.anything(),
-      2,
-    );
+    expect(supportRequest(1)).toMatchObject({ count: 2, candidates: ['坚壁清野', '清风驱疾'] });
   });
 
   test.each([
@@ -243,13 +260,8 @@ describe('CurrentTeam support actions', () => {
     fireEvent.click(screen.getByRole('button', { name: '推荐支援武将' }));
 
     // Exact candidates also prove owned heroes and active offers stay excluded.
-    // Limit diagnostics to the pools instead of dumping the entire model.
-    expect(mocks.recommendSingleHero).toHaveBeenCalledTimes(1);
-    expect(mocks.recommendSingleHero.mock.calls[0].slice(0, 3)).toEqual([
-      expected,
-      heroes,
-      skills,
-    ]);
+    expect(mocks.runLineup).toHaveBeenCalledTimes(1);
+    expect(supportRequest()).toMatchObject({ candidates: expected, heroes, skills });
   });
 
   test.each([4, 7])('allows searching and selecting a later-season support hero in S%i', async (season) => {
@@ -277,13 +289,13 @@ describe('CurrentTeam support actions', () => {
     }));
     fireEvent.click(screen.getAllByRole('button', { name: '推荐支援战法' })[0]);
 
-    expect(mocks.recommendTwoSkills).toHaveBeenCalledWith(
-      ['百战不殆', '坚壁清野'],
+    expect(supportRequest()).toEqual({
       heroes,
       skills,
-      expect.anything(),
-      2,
-    );
+      kind: 'skill',
+      count: 2,
+      candidates: ['百战不殆', '坚壁清野'],
+    });
   });
 
   test('keeps the roster header on one line with 44px edit targets', () => {
@@ -304,8 +316,6 @@ describe('CurrentTeam support actions', () => {
   test('does not expose support actions for a read-only roster', () => {
     render(team({ editable: false }));
 
-    expect(mocks.recommendSingleHero).not.toHaveBeenCalled();
-    expect(mocks.recommendTwoSkills).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: '推荐支援武将' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '推荐支援战法' })).not.toBeInTheDocument();
   });

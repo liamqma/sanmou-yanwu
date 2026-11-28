@@ -1,9 +1,9 @@
 # 三国谋定天下 (演武) battle analytics
 
 A personal analytics tool for the mobile game 三国谋定天下 (演武). Battle reports
-are read from the emulator's client cache into battle JSON, an offline builder
-trains a model on those battles, and a React app uses the generated model in
-the browser to recommend heroes and skills.
+are read from the emulator's client cache into battle JSON, a neural lineup
+model is trained on those battles, and a React app runs the exported model in
+the browser to build teams and recommend heroes and skills.
 
 - [GAME_RULE.md](GAME_RULE.md): the draft rules.
 - [DEVELOPMENT.md](DEVELOPMENT.md): the workflow and which tests to run.
@@ -14,30 +14,30 @@ the browser to recommend heroes and skills.
 | Command | What it does |
 |---|---|
 | `make sync` | Install Python dependencies (uv, Python 3.12). |
-| `make build-recommendation` | Rebuild `web/src/recommendation_data.json`. |
-| `make evaluate-recommendation` | Run the full evaluation. It writes an ignored report and never changes production weights. |
+| `make train-lineup` | Train the lineup model into `.cache/lineup-net/final` (needs the `neural` dependency group). |
+| `make export-lineup` | Export the trained model and its parity fixtures to `web/`. |
 | `make sync-yanwu-corpus` | Download and verify the pinned Yanwu corpus into `.cache/yanwu/`. |
 | `make build-telemetry EXPORT=<sql>` | Update telemetry from a D1 export. |
 | `make import-yanwu [APPLY=1]` | Check the guide workbook, or import it with `APPLY=1`. |
 | `make web` | Start the dev server on http://localhost:3000. |
-| `make test-data`, `make test-telemetry` | Python tests. |
+| `make test-data`, `make test-telemetry`, `make test-lineup` | Python tests. |
 
 ## Recommendation pipeline
 
-- `data/build_recommendation_data.py` trains a regularized logistic
-  (Bradley-Terry) model on battles from `data/battles/` (own captures),
-  `data/web-upload/` (community reports from before uploads closed), and the pinned Yanwu corpus
-  (`data/external/yanwu-release.json`, CC BY 4.0). It writes
-  `web/src/recommendation_data.json`; never edit that file by hand.
-- The browser scores options with `web/src/services/recommendationEngine.ts`.
-  Build feature ids only through `recommendationModel.ts`, so they match the
-  Python builder.
-- The own captures come from 州内淘汰赛, a late stage that only stronger teams
-  reach, so the builder adds an appearance prior: heroes and skills seen more
-  often than expected get a bonus. Model decisions are recorded in
-  [data/evaluation/](data/evaluation/).
-- The draft page's 队伍编排 allocates 当前阵容 into three teams
-  (`web/src/services/teamAllocation.ts`).
+- `data/lineup_net.py` trains a small transformer over one team (3 heroes and
+  their 6 extra skills) on battles from `data/battles/` (own captures),
+  `data/web-upload/` (community reports from before uploads closed), and the
+  pinned Yanwu corpus (`data/external/yanwu-release.json`, CC BY 4.0). It
+  scores how likely players are to field a team and how strong the team is.
+- `data/export_lineup_model.py` writes `web/public/game-data/lineup_model.bin`
+  and `lineup_model.json`, and the fixtures of the parity test; never edit
+  those files by hand.
+- The browser runs the same model and search in a Web Worker
+  (`web/src/services/lineupModel.ts`, `lineupSearch.ts`). They mirror
+  `data/lineup_net.py`; change both together and re-export.
+- One search serves three features: 队伍编排 (best three teams for 当前阵容),
+  the three-choice recommendation (best lineup with each offered set), and the
+  support pick (best lineup with each candidate card).
 - Guide data in `web/public/game-data/database.json` is attributed to 但丁与你.
   Never publish the workbook's contact details.
 

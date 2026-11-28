@@ -53,8 +53,8 @@ const TITLE_FONT = '"Songti SC", STSong, serif';
 
 export interface ShareTeam {
   slots: Array<{ hero: string | null; skills: [string | null, string | null] }>;
-  score: number | null;
-  winChance: number;
+  /** Mean predicted win rate against common teams; null when not known. */
+  strength: number | null;
 }
 
 export interface RoundShareImageInput {
@@ -94,9 +94,11 @@ export const getRoundShareGroupTitle = (
   `第 ${groupIndex + 1} 组${groupIndex === recommendedSetIndex ? ' · AI 推荐' : ''}`;
 
 export const getRoundShareTeamScoreLines = (team: ShareTeam): string[] =>
-  team.score === null
+  team.slots.every((slot) => !slot.hero)
     ? ['空']
-    : [`评分 ${(team.score * 10).toFixed(1)}`, `胜率 ${Math.round(team.winChance * 100)}%`];
+    : team.strength === null
+      ? []
+      : [`胜率 ${Math.round(team.strength * 100)}%`];
 
 /** Exported for deterministic layout tests without requiring a browser canvas. */
 export const getRoundShareImageLayout = (

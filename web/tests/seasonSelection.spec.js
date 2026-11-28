@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const database = require('../public/game-data/database.json');
+const lineupModel = require('../public/game-data/lineup_model.json');
 
 const heroEntries = Object.entries(database.heroes || {});
 const skillEntries = Object.entries(database.skills || {});
@@ -84,11 +85,13 @@ async function capture(page, testInfo, name) {
   await testInfo.attach(name, { path, contentType: 'image/png' });
 }
 
-async function expectCandidateNames(dialog, expected) {
-  // Read the actual scored recommendation rows, not just the top suggestion.
+async function expectCandidateNames(dialog, eligible, known) {
+  // The list is the model's ten best candidates. Each must be eligible, and
+  // cards the model has never seen are not ranked.
+  const ranked = eligible.filter((name) => known.includes(name));
   const names = dialog.getByRole('list').locator('.MuiChip-label');
-  await expect(names).toHaveCount(expected.length);
-  expect((await names.allTextContents()).sort()).toEqual([...expected].sort());
+  await expect(names).toHaveCount(Math.min(10, ranked.length), { timeout: 60000 });
+  for (const name of await names.allTextContents()) expect(ranked).toContain(name);
 }
 
 async function checkSupportSkills(page, season, testInfo) {
@@ -100,7 +103,7 @@ async function checkSupportSkills(page, season, testInfo) {
   const dialog = page.getByRole('dialog', { name: '推荐支援战法' });
   await expectCandidateNames(dialog, regularSkillEntries
     .filter(([name, skill]) => skill.season <= season && !setupSkills.includes(name))
-    .map(([name]) => name));
+    .map(([name]) => name), lineupModel.skills);
   await dialog.getByLabel('搜索战法...').fill(futureSkill);
   await expect(page.getByText('无匹配结果')).toBeVisible();
   await capture(page, testInfo, `S${season}-blocks-S${database.skills[futureSkill].season}-tactic-${futureSkill}`);
@@ -148,7 +151,7 @@ test.describe('Season selection', () => {
       const dialog = page.getByRole('dialog', { name: '推荐支援武将' });
       await expectCandidateNames(dialog, heroEntries
         .filter(([name, hero]) => hero.season <= season && !setupHeroes.includes(name))
-        .map(([name]) => name));
+        .map(([name]) => name), lineupModel.heroes);
       const search = dialog.getByLabel('搜索武将...');
       // This independent future hero is neither owned nor in an active offer.
       await search.fill(futureSupportHero);
@@ -190,7 +193,7 @@ test.describe('Season selection', () => {
         await page.getByRole('option').filter({ has: page.getByText(offered[index], { exact: true }) }).click();
       }
       await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-      await expect(page.getByText('推荐：第')).toBeVisible();
+      await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 60000 });
       await page.getByRole('button', { name: '选择本组' }).first().click();
       await page.getByRole('button', { name: '确认选择并进入下一轮' }).click();
       const futureSkill = futureRegularSkills.find(name => !setupSkills.includes(name));
@@ -225,7 +228,7 @@ test.describe('Season selection', () => {
       const dialog = page.getByRole('dialog', { name: '推荐支援武将' });
       await expectCandidateNames(dialog, heroEntries
         .filter(([name]) => !setupHeroes.includes(name) && name !== futureRoundHero)
-        .map(([name]) => name));
+        .map(([name]) => name), lineupModel.heroes);
       // Accept the actual engine suggestion before exercising manual search.
       const recommendedHero = await dialog.getByRole('alert').locator('strong').innerText();
       await dialog.getByRole('button', { name: '设为支援武将' }).click();

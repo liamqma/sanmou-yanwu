@@ -1,72 +1,84 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import AnalysisGrid from '../AnalysisGrid';
-import type { OptionAnalysis } from '../../../services/recommendationEngine';
+import type { OptionAnalysis } from '../../../types/game';
 
-const option = (setIndex: number, score: number): OptionAnalysis => ({
+const option = (setIndex: number, gap: number, joins: string[] = []): OptionAnalysis => ({
   set_index: setIndex,
-  items: [],
-  final_score: score,
-  rank: setIndex + 1,
-  item_scores: [],
-  synergies: [],
-  combo_synergies: [],
-  combo_tradeoffs: [],
-  tradeoffs: [],
-  evidence: { featureCount: 0, totalSupport: 0, minSupport: 0 },
-  debug: { rawScore: score / 10, evaluatedFeatures: [] },
+  score: -30 + gap,
+  gap,
+  teams: [
+    { heroes: ['刘备', joins[0] ?? '', ''], skills: ['仁德', '', joins[1] ?? '', '', '', ''], strength: 0.512 },
+    { heroes: ['关羽', '张飞', '赵云'], skills: ['', '', '', '', '', ''], strength: 0.248 },
+    { heroes: ['', '', ''], skills: ['', '', '', '', '', ''], strength: null },
+  ],
 });
 
-describe('AnalysisGrid player preference display', () => {
+describe('AnalysisGrid', () => {
   const sets = {
     set1: ['A', 'B', 'C'],
     set2: ['D', 'E', 'F'],
     set3: ['G', 'H', 'I'],
   };
-  const analysis = [
-    option(0, 8),
-    option(1, 7),
-    option(2, 4),
-  ];
+  const analysis = [option(0, 0, ['A', '战法乙']), option(1, -1.26), option(2, -0.01)];
 
-  test('uses player-choice labels and highlights its top separately from AI', () => {
+  test('shows each set against the best one and the win rates of its lineup', () => {
     render(
       <AnalysisGrid
         sets={sets}
         analysis={analysis}
         selectedIndex={null}
         recommendedIndex={0}
-        preference={{
-          version: 'preference-v1:0000000000000001',
-          probabilities: [0.3, 0.55, 0.15],
-          top_index: 1,
-          probability_margin: 0.25,
-          meaningful_margin: 0.1,
-          explanation_driver: 'D、E在模型中的选择信号较强。',
-        }}
         onSelectSet={vi.fn()}
         roundType="hero"
       />
     );
 
-    expect(screen.getByTestId('option-preference-0')).toHaveTextContent(
-      '玩家选择概率：30.0%'
-    );
-    expect(screen.getByTestId('option-preference-1')).toHaveTextContent(
-      '玩家选择概率：55.0%'
-    );
-    expect(screen.getByTestId('option-preference-2')).toHaveTextContent(
-      '玩家选择概率：15.0%'
-    );
-    expect(screen.getByText('玩家选择最高')).toBeInTheDocument();
-    expect(screen.queryByText('玩家偏好最高')).not.toBeInTheDocument();
     const cards = screen.getAllByTestId('analysis-set-card');
     expect(cards[0]).toHaveAttribute('data-ai-recommended', 'true');
-    expect(cards[0]).not.toHaveAttribute('data-player-choice-top');
-    expect(cards[1]).toHaveAttribute('data-player-choice-top', 'true');
     expect(cards[1]).not.toHaveAttribute('data-ai-recommended');
-    expect(screen.getByTestId('preference-disagreement')).toHaveTextContent(
-      'AI 按当前阵容强度推荐 A；玩家选择模型认为 B 更常被选（55.0%）。D、E在模型中的选择信号较强。 这描述玩家偏好，不会改变 AI 推荐。'
+    expect(screen.getByTestId('option-score-0')).toHaveTextContent('最优');
+    expect(screen.getByTestId('option-score-1')).toHaveTextContent('比最优低1.3');
+    // A gap that rounds to 0.0 is a tie.
+    expect(screen.getByTestId('option-score-2')).toHaveTextContent('最优');
+    expect(screen.getByTestId('option-strengths-0')).toHaveTextContent('选后三队胜率 51% / 25% / —');
+  });
+
+  test('lays out the lineup after the pick with the offered cards in bold', () => {
+    render(
+      <AnalysisGrid
+        sets={sets}
+        analysis={analysis}
+        selectedIndex={null}
+        recommendedIndex={0}
+        onSelectSet={vi.fn()}
+        roundType="hero"
+      />
     );
+
+    const lineup = within(screen.getAllByTestId('option-lineup')[0]);
+    expect(lineup.getByText('队伍一 · 胜率 51%')).toBeInTheDocument();
+    expect(lineup.getByText('A').tagName).toBe('STRONG');
+    // Only the offered cards are bold, not what the model moves around them.
+    expect(lineup.getByText('战法乙').tagName).not.toBe('STRONG');
+    expect(lineup.getByText('刘备', { exact: false })).toHaveTextContent('刘备（仁德）');
+    expect(lineup.getByText('队伍三').nextElementSibling).toHaveTextContent('空');
+  });
+
+  test('names offered cards the model has never seen', () => {
+    render(
+      <AnalysisGrid
+        sets={sets}
+        analysis={analysis}
+        unknown={{ heroes: ['E', '不在本轮'], skills: ['A'] }}
+        selectedIndex={null}
+        recommendedIndex={0}
+        onSelectSet={vi.fn()}
+        roundType="hero"
+      />
+    );
+
+    expect(screen.getAllByTestId('option-unknown-cards')).toHaveLength(1);
+    expect(screen.getByTestId('option-unknown-cards')).toHaveTextContent('模型没见过E，按未知卡估算');
   });
 
   test('renders all three card groups without a mobile tab switcher', () => {
@@ -87,56 +99,6 @@ describe('AnalysisGrid player preference display', () => {
     expect(screen.queryByTestId('mobile-option-switcher')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '选择本组' })).toHaveLength(2);
     expect(screen.getByRole('button', { name: '已选' })).toBeInTheDocument();
-  });
-
-  test('does not explain a disagreement below the meaningful margin', () => {
-    render(
-      <AnalysisGrid
-        sets={sets}
-        analysis={analysis}
-        selectedIndex={null}
-        recommendedIndex={0}
-        preference={{
-          version: 'preference-v1:0000000000000001',
-          probabilities: [0.42, 0.47, 0.11],
-          top_index: 1,
-          probability_margin: 0.05,
-          meaningful_margin: 0.1,
-          explanation_driver: 'D在模型中的选择信号较强。',
-        }}
-        onSelectSet={vi.fn()}
-        roundType="hero"
-      />
-    );
-
-    expect(screen.getByText('玩家选择最高')).toBeInTheDocument();
-    expect(screen.queryByTestId('preference-disagreement')).not.toBeInTheDocument();
-  });
-
-  test('does not explain a meaningful margin when both models pick the same option', () => {
-    render(
-      <AnalysisGrid
-        sets={sets}
-        analysis={analysis}
-        selectedIndex={null}
-        recommendedIndex={1}
-        preference={{
-          version: 'preference-v1:0000000000000001',
-          probabilities: [0.2, 0.7, 0.1],
-          top_index: 1,
-          probability_margin: 0.5,
-          meaningful_margin: 0.1,
-          explanation_driver: 'D在模型中的选择信号较强。',
-        }}
-        onSelectSet={vi.fn()}
-        roundType="hero"
-      />
-    );
-
-    const cards = screen.getAllByTestId('analysis-set-card');
-    expect(cards[1]).toHaveAttribute('data-ai-recommended', 'true');
-    expect(cards[1]).toHaveAttribute('data-player-choice-top', 'true');
-    expect(screen.queryByTestId('preference-disagreement')).not.toBeInTheDocument();
   });
 
   test('shows hero and skill guide rankings without affecting unranked items', () => {
@@ -175,37 +137,5 @@ describe('AnalysisGrid player preference display', () => {
     expect(screen.getByText('战法甲 · S档')).toBeInTheDocument();
     expect(screen.getByText('战法乙 · B档')).toBeInTheDocument();
     expect(screen.getByText('战法丙')).toBeInTheDocument();
-  });
-
-  test('shows exact signed values for positive and negative combination evidence', () => {
-    const combinationAnalysis = analysis.map((entry) => ({ ...entry }));
-    combinationAnalysis[0] = {
-      ...combinationAnalysis[0],
-      combo_synergies: [
-        { featureId: 'HP|甲|乙', label: '甲 + 乙', family: 'HP', weight: 0.36, support: 20 },
-        { featureId: 'HP|戊|己', label: '戊 + 己', family: 'HP', weight: 0.45, support: 15 },
-      ],
-      combo_tradeoffs: [
-        { featureId: 'HP|丙|丁', label: '丙 + 丁', family: 'HP', weight: -0.18, support: 10 },
-      ],
-    };
-
-    render(
-      <AnalysisGrid
-        sets={sets}
-        analysis={combinationAnalysis}
-        selectedIndex={null}
-        onSelectSet={vi.fn()}
-        roundType="hero"
-      />
-    );
-
-    expect(screen.queryByText('单项加分:')).not.toBeInTheDocument();
-    expect(screen.queryByText('关键组合依据（已计入评分）')).not.toBeInTheDocument();
-    expect(screen.getByTestId('combination-evidence')).toBeInTheDocument();
-    expect(screen.getByText('+4.5')).toBeInTheDocument();
-    expect(screen.getByText('+3.6')).toBeInTheDocument();
-    expect(screen.getByText('−1.8')).toBeInTheDocument();
-    expect(screen.queryByText(/👍|👎/)).not.toBeInTheDocument();
   });
 });

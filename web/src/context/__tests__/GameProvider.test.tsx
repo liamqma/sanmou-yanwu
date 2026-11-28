@@ -13,10 +13,6 @@ vi.mock('../../services/telemetry', () => ({
   initializeTelemetry: vi.fn(),
 }));
 
-vi.mock('../../services/telemetryData', () => ({
-  preloadTelemetryData: vi.fn(),
-}));
-
 const makeDatabaseItems = (maxSeason: number): DatabaseItems => ({
   heroes: ['旧武将', '新武将'],
   heroMetadata: {

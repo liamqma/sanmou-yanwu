@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
 import { getRoundType, getItemsPerSet, TOTAL_ROUNDS } from "../../services/gameLogic";
-import { generateLLMPrompt } from "../../services/promptGenerator";
 import RoundInfo from "./RoundInfo";
 import CurrentTeam from "./CurrentTeam";
 import RecommendationPanel from "./RecommendationPanel";
@@ -14,20 +12,12 @@ import AnalysisGrid from "./AnalysisGrid";
 import TeamBuilder, { RosterDragSource, RosterDropZone, TeamBuilderDndProvider } from "./TeamBuilder";
 import RoundShareDialog from "./RoundShareDialog";
 import ResponsiveDisclosure from "../common/ResponsiveDisclosure";
-import { copyImageToClipboard, copyToClipboard } from "../../utils/clipboard";
+import { copyImageToClipboard } from "../../utils/clipboard";
 import { renderRoundShareImage } from "../../utils/roundShareImage";
 import type { GameState, RoundType, SetName } from "../../types/game";
-import type { OptionAnalysis } from "../../services/recommendationEngine";
 import { useTeamBuilder } from "../../hooks/useTeamBuilder";
-import type { PreferencePrediction } from "../../types/telemetryData";
-import { recommendationData } from "../../data";
+import { defaultSkill } from "../../data";
 import { recordRoundTelemetry } from "../../services/telemetry";
-import { recordSuccessfulPromptCopy } from "../../services/googleAnalytics";
-import {
-  buildRoundRecommendationDebugContext,
-  registerSanmouDebugContext,
-  SANMOU_DEBUG_SCHEMA,
-} from "../../services/recommendationDebug";
 
 interface QualificationInterstitialProps {
   roundNumber: 7 | 9;
@@ -162,6 +152,7 @@ const QualificationInterstitial = ({
 const GameBoard = () => {
   const { state, dispatch } = useGame();
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -224,6 +215,7 @@ const GameBoard = () => {
       rosterRevision: requestRosterRevision,
     };
     setLoading(true);
+    setProgress(0);
     setError(null);
 
     const takeCurrentRequest = (): boolean => {
@@ -240,12 +232,16 @@ const GameBoard = () => {
     };
 
     void Promise.resolve()
-      .then(() => api.getRecommendation(roundType, availableSets, requestGameState))
-      .then((response) => {
+      .then(() =>
+        api.getRecommendation(roundType, availableSets, requestGameState, (done) => {
+          if (pendingRecommendationRequestRef.current?.id === requestId) setProgress(done);
+        })
+      )
+      .then((recommendation) => {
         if (!takeCurrentRequest()) return;
         dispatch({
           type: mode === 'rescore' ? 'RESCORE_RECOMMENDATION' : 'SET_RECOMMENDATION',
-          recommendation: response.recommendation || response,
+          recommendation,
           rosterRevision: requestRosterRevision,
         });
         setLoading(false);
@@ -277,53 +273,6 @@ const GameBoard = () => {
       }
     };
   }, []);
-
-  useEffect(
-    () =>
-      registerSanmouDebugContext(() => {
-        if (!gameState) {
-          return {
-            schema: SANMOU_DEBUG_SCHEMA,
-            page: 'candidate-suggestion',
-            status: 'not-ready',
-            reason: 'Start a game before requesting recommendation debug context.',
-          };
-        }
-        if (gameState.round_number > TOTAL_ROUNDS) {
-          return {
-            schema: SANMOU_DEBUG_SCHEMA,
-            page: 'candidate-suggestion',
-            status: 'not-ready',
-            reason: 'The draft is complete and there is no active candidate recommendation.',
-          };
-        }
-        return {
-          ...buildRoundRecommendationDebugContext({
-            season: state.selectedSeason,
-            gameState,
-            roundType: getRoundType(gameState.round_number),
-            currentRoundInputs,
-            recommendation: currentRecommendation,
-          }),
-          teamBuilder: {
-            mode: teamBuilder.mode,
-            layout: teamBuilder.layout,
-            teams: teamBuilder.evaluation.teams,
-            twoOfThree: teamBuilder.evaluation.twoOfThree,
-            referenceTeamScore: recommendationData.model.reference_team_score,
-          },
-        };
-      }),
-    [
-      currentRecommendation,
-      currentRoundInputs,
-      gameState,
-      state.selectedSeason,
-      teamBuilder.evaluation,
-      teamBuilder.layout,
-      teamBuilder.mode,
-    ]
-  );
 
   const recommendationIsCurrent =
     currentRecommendation !== null &&
@@ -397,15 +346,17 @@ const GameBoard = () => {
       evaluation={teamBuilder.evaluation}
       mode={teamBuilder.mode}
       allocating={teamBuilder.allocating}
+      progress={teamBuilder.progress}
+      error={teamBuilder.error}
+      onRetry={teamBuilder.retry}
       heroes={poolHeroes}
       skills={poolSkills}
       placed={teamBuilder.placed}
       supportItems={supportItems}
-      defaultSkill={recommendationData.catalog.default_skill}
+      defaultSkill={defaultSkill}
       onMove={teamBuilder.move}
       onRestoreAuto={teamBuilder.restoreAuto}
       onFillRemaining={teamBuilder.fillRemaining}
-      nothingToFill={teamBuilder.nothingToFill}
     />
   );
 
@@ -650,22 +601,11 @@ const GameBoard = () => {
       return;
     }
 
-    const analysis = currentRecommendation?.analysis as OptionAnalysis[] | undefined;
-    const preference = currentRecommendation?.preference as
-      | PreferencePrediction
-      | null
-      | undefined;
-    const recommendedIndex = currentRecommendation?.recommended_set_index;
-    const pairedScores = [0, 1, 2].map((index) =>
-      analysis?.find((option) => option.set_index === index)?.final_score
-    );
-    if (
-      typeof recommendedIndex === 'number' &&
-      pairedScores.every((score): score is number => typeof score === 'number')
-    ) {
+    if (currentRecommendation) {
       recordRoundTelemetry({
         roundNumber,
         roundType,
+        modelVersion: currentRecommendation.model_version,
         poolBefore: {
           heroes: [...(gameState.current_heroes || [])],
           skills: [...(gameState.current_skills || [])],
@@ -677,11 +617,12 @@ const GameBoard = () => {
           [...(currentRoundInputs.set2 || [])],
           [...(currentRoundInputs.set3 || [])],
         ],
-        pairedScores,
-        recommendedIndex,
+        scores: [0, 1, 2].map(
+          (index) =>
+            currentRecommendation.analysis.find((option) => option.set_index === index)?.score ?? NaN
+        ),
+        recommendedIndex: currentRecommendation.recommended_set_index,
         chosenIndex: selectedOptionIndex,
-        preferenceModelVersion: preference?.version ?? null,
-        preferenceProbabilities: preference?.probabilities ?? null,
       });
     }
 
@@ -695,22 +636,6 @@ const GameBoard = () => {
     setError(null);
   };
 
-  const handleGeneratePrompt = async () => {
-    try {
-      const prompt = await generateLLMPrompt({
-        gameState,
-        currentRoundInputs,
-        roundType,
-      });
-      const copied = await copyToClipboard(prompt);
-      if (copied) recordSuccessfulPromptCopy('roundAnalysis');
-      setSnackbarMessage('提示词已复制到剪贴板');
-    } catch (err) {
-      setError('生成提示词失败：' + (err as Error).message);
-      console.error(err);
-    }
-  };
-
   const handleCopyRoundImage = async () => {
     const exportId = ++shareExportSequenceRef.current;
     setShareImageBusy(true);
@@ -722,8 +647,7 @@ const GameBoard = () => {
     };
     const shareTeams = teamBuilder.layout.map((slots, index) => ({
       slots,
-      score: teamBuilder.evaluation.teams[index].score,
-      winChance: teamBuilder.evaluation.teams[index].winChance,
+      strength: teamBuilder.evaluation.strengths[index],
     }));
     const availableSets: [string[], string[], string[]] = [
       [...(currentRoundInputs.set1 || [])],
@@ -742,8 +666,8 @@ const GameBoard = () => {
           ? currentRecommendation?.recommended_set_index
           : undefined;
         if (!isValidSetIndex(recommendedSetIndex)) {
-          const response = await api.getRecommendation(roundType, availableSets, gameState);
-          recommendedSetIndex = response.recommendation.recommended_set_index;
+          recommendedSetIndex = (await api.getRecommendation(roundType, availableSets, gameState))
+            .recommended_set_index;
         }
         if (!isValidSetIndex(recommendedSetIndex)) {
           throw new Error('AI 推荐组无效');
@@ -836,15 +760,10 @@ const GameBoard = () => {
 
         <AnalysisGrid
           sets={currentRoundInputs}
-          analysis={currentRecommendation?.analysis as OptionAnalysis[] | undefined}
+          analysis={currentRecommendation?.analysis}
+          unknown={currentRecommendation?.unknown}
           selectedIndex={selectedOptionIndex}
           recommendedIndex={currentRecommendation?.recommended_set_index}
-          preference={
-            currentRecommendation?.preference as
-              | PreferencePrediction
-              | null
-              | undefined
-          }
           onSelectSet={handleSelectOption}
           roundType={roundType}
           heroMetadata={heroMetadata}
@@ -863,22 +782,15 @@ const GameBoard = () => {
                 disabled={!allSetsComplete || loading}
               >
                 {loading ? (
-                  <CircularProgress size={20} color="inherit" />
+                  <>
+                    <CircularProgress size={16} color="inherit" sx={{ mr: 0.75 }} />
+                    <span role="status">分析中 {Math.round(progress * 100)}%</span>
+                  </>
                 ) : currentRecommendation ? (
                   "重新分析"
                 ) : (
                   "获取 AI 推荐"
                 )}
-              </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                size="small"
-                onClick={handleGeneratePrompt}
-                disabled={!allSetsComplete}
-                startIcon={<ContentCopyIcon fontSize="small" />}
-              >
-                复制 AI 分析提示词
               </Button>
               <Button
                 variant="outlined"

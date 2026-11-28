@@ -12,20 +12,27 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
 import { alpha } from '@mui/material/styles';
 import { formatHeroRanking, formatSkillRanking } from '../../utils/itemMetadata';
-import type { OptionAnalysis, Contribution } from '../../services/recommendationEngine';
-import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
-import type { PreferencePrediction } from '../../types/telemetryData';
+import type { UnknownCards } from '../../services/lineupProtocol';
+import type {
+  CurrentRoundInputs,
+  HeroMeta,
+  OptionAnalysis,
+  RoundType,
+  SetName,
+  SkillMeta,
+} from '../../types/game';
 import ResponsiveDisclosure from '../common/ResponsiveDisclosure';
 import AutocompleteInput from '../common/AutocompleteInput';
 import GameCardArt from '../common/GameCardArt';
 
 interface AnalysisGridProps {
   sets: CurrentRoundInputs;
-  /** Per-option roster-strength analysis (see recommendationEngine.OptionAnalysis). */
+  /** The best lineup the model finds with each set added to the pool. */
   analysis?: OptionAnalysis[];
+  /** Offered or owned cards the model has never seen. */
+  unknown?: UnknownCards;
   selectedIndex: number | null;
   recommendedIndex?: number;
-  preference?: PreferencePrediction | null;
   onSelectSet: (index: number) => void;
   roundType: RoundType;
   heroMetadata?: Record<string, HeroMeta> | null;
@@ -37,13 +44,10 @@ interface AnalysisGridProps {
   actions?: ReactNode;
 }
 
-/** One-decimal score with an explicit sign (+ for nonnegative, − for negative). */
-const fmtSigned = (x: number): string => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}`;
-
-const isComboContribution = (contribution: Contribution): boolean =>
-  contribution.family === 'HP' ||
-  contribution.family === 'HS' ||
-  contribution.family === 'SP';
+const TEAM_NAMES = ['队伍一', '队伍二', '队伍三'];
+const percent = (value: number): string => `${Math.round(value * 100)}%`;
+/** A gap below this rounds to 0.0 and is shown as a tie with the best set. */
+const TIE = 0.05;
 
 /**
  * The three round options are both the editor and the analysis surface. Each
@@ -53,9 +57,9 @@ const isComboContribution = (contribution: Contribution): boolean =>
 const AnalysisGrid = ({
   sets,
   analysis,
+  unknown,
   selectedIndex,
   recommendedIndex,
-  preference = null,
   onSelectSet,
   roundType,
   heroMetadata = null,
@@ -67,37 +71,13 @@ const AnalysisGrid = ({
   actions,
 }: AnalysisGridProps) => {
   const hasAnalysis = Boolean(analysis?.length);
-  const hasRecommendedIndex =
-    typeof recommendedIndex === 'number' &&
-    Number.isInteger(recommendedIndex) &&
-    recommendedIndex >= 0 &&
-    recommendedIndex < 3;
-  const hasMeaningfulDisagreement =
-    preference !== null &&
-    hasRecommendedIndex &&
-    preference.top_index !== recommendedIndex &&
-    preference.probability_margin >= preference.meaningful_margin;
-  const optionLetter = (index: number) => String.fromCharCode(65 + index);
-  const preferenceExplanation =
-    preference &&
-    hasMeaningfulDisagreement &&
-    typeof recommendedIndex === 'number'
-      ? `AI 按当前阵容强度推荐 ${optionLetter(recommendedIndex)}；玩家选择模型认为 ${optionLetter(preference.top_index)} 更常被选（${(preference.probabilities[preference.top_index] * 100).toFixed(1)}%）。${preference.explanation_driver} 这描述玩家偏好，不会改变 AI 推荐。`
-      : null;
+  const unknownItems = new Set(roundType === 'hero' ? unknown?.heroes : unknown?.skills);
 
   const allSelectedItems = [
     ...(sets.set1 || []),
     ...(sets.set2 || []),
     ...(sets.set3 || []),
   ];
-
-  const combinationEvidence = (option?: OptionAnalysis): Contribution[] => {
-    if (!option) return [];
-    return [...option.combo_synergies, ...option.combo_tradeoffs]
-      .filter(isComboContribution)
-      .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
-      .slice(0, 3);
-  };
 
   const itemChipLabel = (item: string) => {
     if (roundType === 'hero') {
@@ -127,37 +107,37 @@ const AnalysisGrid = ({
     );
   };
 
-  const renderContributions = (items: Contribution[]) => {
-    if (!items.length) return null;
+  /** The three teams the model would field with this set, the set's own cards in bold. */
+  const renderLineup = (option: OptionAnalysis, items: string[]) => {
+    const mark = (name: string) => (items.includes(name) ? <strong key={name}>{name}</strong> : name);
     return (
-      <Box
-        data-testid="combination-evidence"
-        sx={{ mb: 1.25, display: 'grid', gap: 0.4 }}
-      >
-        {items.map((contribution) => (
-          <Box
-            key={contribution.featureId}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 1,
-              px: 0.75,
-              py: 0.4,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'rgba(255,253,247,.66)',
-            }}
-          >
-            <Typography variant="caption" noWrap sx={{ minWidth: 0 }}>
-              {contribution.label}
+      <Box data-testid="option-lineup" sx={{ mb: 1.25, display: 'grid', gap: 0.75 }}>
+        {option.teams.map((team, t) => (
+          <Box key={TEAM_NAMES[t]}>
+            <Typography variant="caption" component="div" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+              {TEAM_NAMES[t]}
+              {team.strength !== null && ` · 胜率 ${percent(team.strength)}`}
             </Typography>
-            <Typography
-              variant="caption"
-              color={contribution.weight >= 0 ? 'success.dark' : 'error.main'}
-              sx={{ flexShrink: 0, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-            >
-              {fmtSigned(contribution.weight * 10)}
+            <Typography variant="caption" component="div" sx={{ lineHeight: 1.5 }}>
+              {team.heroes.every((hero) => !hero)
+                ? '空'
+                : team.heroes.map((hero, slot) => {
+                    if (!hero) return null;
+                    const skills = team.skills.slice(2 * slot, 2 * slot + 2).filter(Boolean);
+                    return (
+                      <Box component="span" key={hero} sx={{ display: 'block' }}>
+                        {mark(hero)}
+                        {skills.length > 0 && '（'}
+                        {skills.map((skill, k) => (
+                          <span key={skill}>
+                            {k > 0 && '、'}
+                            {mark(skill)}
+                          </span>
+                        ))}
+                        {skills.length > 0 && '）'}
+                      </Box>
+                    );
+                  })}
             </Typography>
           </Box>
         ))}
@@ -170,9 +150,7 @@ const AnalysisGrid = ({
     const setAnalysis = analysis?.find((option) => option.set_index === index);
     const isSelected = selectedIndex === index;
     const isRecommended = recommendedIndex === index;
-    const isPreferenceTop = preference?.top_index === index;
-    const gain = setAnalysis?.final_score;
-    const comboEvidence = combinationEvidence(setAnalysis);
+    const unseen = items.filter((item) => unknownItems.has(item));
     const choices = availableItems.filter(
       (item) => !allSelectedItems.includes(item)
     );
@@ -183,16 +161,12 @@ const AnalysisGrid = ({
         key={setName}
         data-testid="analysis-set-card"
         data-ai-recommended={isRecommended ? 'true' : undefined}
-        data-player-choice-top={isPreferenceTop ? 'true' : undefined}
       >
         <Card
           sx={{
             height: '100%',
             border: '1px solid',
             borderColor: isSelected || isRecommended ? 'primary.main' : 'divider',
-            outline: isPreferenceTop ? '2px solid' : 'none',
-            outlineColor: 'info.main',
-            outlineOffset: '-2px',
             position: 'relative',
             bgcolor: isSelected
               ? alpha('#456c5f', 0.13)
@@ -268,7 +242,6 @@ const AnalysisGrid = ({
               }}
             >
               {items.map((item) => {
-                const itemScore = setAnalysis?.item_scores?.find((score) => score.item === item);
                 const rankingLabel = itemChipLabel(item);
                 return (
                   <Box key={item} sx={{ minWidth: 0 }}>
@@ -286,15 +259,6 @@ const AnalysisGrid = ({
                         sx={{ mt: 0.35, display: 'block', textAlign: 'center', lineHeight: 1.2 }}
                       >
                         {rankingLabel}
-                      </Typography>
-                    )}
-                    {itemScore && (
-                      <Typography
-                        variant="caption"
-                        color={itemScore.score >= 0 ? 'success.dark' : 'error.main'}
-                        sx={{ mt: 0.35, display: 'block', textAlign: 'center', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-                      >
-                        单项 {fmtSigned(itemScore.score)}
                       </Typography>
                     )}
                   </Box>
@@ -320,42 +284,53 @@ const AnalysisGrid = ({
               ))}
             </Box>
 
-            {typeof gain === 'number' ? (
+            {unseen.length > 0 && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                data-testid="option-unknown-cards"
+                sx={{ mb: 1, display: 'block', textAlign: 'center' }}
+              >
+                模型没见过{unseen.join('、')}，按未知卡估算
+              </Typography>
+            )}
+
+            {setAnalysis ? (
               <>
                 <Box sx={{ mb: 1.15, textAlign: 'center' }}>
                   <Typography
                     component="p"
                     variant="h4"
-                    color={gain >= 0 ? 'secondary.dark' : 'error.main'}
+                    color={setAnalysis.gap > -TIE ? 'secondary.dark' : 'text.secondary'}
                     data-testid={`option-score-${index}`}
                     sx={{ fontVariantNumeric: 'tabular-nums', fontSize: { xs: 27, lg: 30 } }}
                   >
-                    <Typography component="span" color="text.secondary" sx={{ mr: 0.75, fontSize: 15 }}>
-                      评分：
-                    </Typography>
-                    {fmtSigned(gain)}
+                    {setAnalysis.gap > -TIE ? (
+                      '最优'
+                    ) : (
+                      <>
+                        <Typography component="span" color="text.secondary" sx={{ mr: 0.75, fontSize: 15 }}>
+                          比最优低
+                        </Typography>
+                        {Math.abs(setAnalysis.gap).toFixed(1)}
+                      </>
+                    )}
                   </Typography>
-                  {preference && (
-                    <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                      <Typography
-                        variant="body2"
-                        color="info.dark"
-                        data-testid={`option-preference-${index}`}
-                        sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 650 }}
-                      >
-                        玩家选择概率：{(preference.probabilities[index] * 100).toFixed(1)}%
-                      </Typography>
-                      {isPreferenceTop && <Chip label="玩家选择最高" color="info" size="small" variant="outlined" />}
-                    </Box>
-                  )}
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    data-testid={`option-strengths-${index}`}
+                    sx={{ mt: 0.5, fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    选后三队胜率{' '}
+                    {setAnalysis.teams
+                      .map((team) => (team.strength === null ? '—' : percent(team.strength)))
+                      .join(' / ')}
+                  </Typography>
                 </Box>
 
-                <ResponsiveDisclosure label={`第${index + 1}组详细分析`}>
-                  {renderContributions(comboEvidence) ?? (
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
-                      暂无关键组合依据。
-                    </Typography>
-                  )}
+                <ResponsiveDisclosure label={`第${index + 1}组选后阵容`}>
+                  {renderLineup(setAnalysis, items)}
                 </ResponsiveDisclosure>
               </>
             ) : (
@@ -410,25 +385,6 @@ const AnalysisGrid = ({
         </Box>
         {actions && <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>{actions}</Box>}
       </Box>
-
-      {preferenceExplanation && (
-        <Box
-          sx={{
-            mb: 1.25,
-            px: 1.25,
-            py: 1,
-            bgcolor: 'info.light',
-            color: 'info.dark',
-            border: '1px solid',
-            borderColor: 'info.main',
-          }}
-          data-testid="preference-disagreement"
-        >
-          <Typography variant="body2" color="inherit">
-            {preferenceExplanation}
-          </Typography>
-        </Box>
-      )}
 
       <Grid container spacing={1.25} data-testid="three-option-grid">
         {renderSetCard('set1', 0)}

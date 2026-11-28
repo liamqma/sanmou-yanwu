@@ -5,6 +5,16 @@ declare module 'virtual:game-database' {
   export default database;
 }
 
+declare module 'virtual:catalog-version' {
+  const version: string;
+  export default version;
+}
+
+declare module 'virtual:lineup-model' {
+  const model: { version: string; battles: number };
+  export default model;
+}
+
 declare module 'virtual:yanwu-guide' {
   const guide: unknown;
   export default guide;

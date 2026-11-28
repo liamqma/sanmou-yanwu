@@ -1,4 +1,4 @@
-import { recommendationData } from '../data';
+import { CATALOG_VERSION } from '../data';
 import type { TelemetryData } from '../types/telemetryData';
 
 const ENDPOINT = '/game-data/telemetry_data.json';
@@ -197,7 +197,6 @@ const SCORE_MARGIN_KEYS_REQUIRED = [
 ] as const;
 
 let cached: Promise<TelemetryData> | null = null;
-let resolved: TelemetryData | null = null;
 let cachedController: AbortController | null = null;
 let cacheGeneration = 0;
 
@@ -948,7 +947,7 @@ export const parseTelemetryData = (value: unknown): TelemetryData => {
       value,
       schemaVersion === 2 ? V2_TOP_LEVEL_KEYS : V3_TOP_LEVEL_KEYS
     ) ||
-    value.catalog_version !== recommendationData.catalog.catalog_version ||
+    value.catalog_version !== CATALOG_VERSION ||
     !isRecord(value.summary)
   ) {
     throw new Error('Telemetry artifact contract is invalid');
@@ -1048,7 +1047,6 @@ export const loadTelemetryData = (
     attempt = fetchDefaultTelemetryData(fetch, controller)
       .then((artifact) => {
         if (cacheGeneration === generation && cached === attempt) {
-          resolved = artifact;
           cachedController = null;
         }
         return artifact;
@@ -1066,20 +1064,10 @@ export const loadTelemetryData = (
   return cached;
 };
 
-/** Return only already-loaded data so local recommendation can never await I/O. */
-export const getCachedTelemetryData = (): TelemetryData | null => resolved;
-
-export const preloadTelemetryData = (): void => {
-  void loadTelemetryData().catch(() => {
-    // A missing or stalled static artifact must not affect local gameplay.
-  });
-};
-
 export const clearTelemetryDataCacheForTests = (): void => {
   cacheGeneration += 1;
   const controller = cachedController;
   cached = null;
-  resolved = null;
   cachedController = null;
   controller?.abort();
 };

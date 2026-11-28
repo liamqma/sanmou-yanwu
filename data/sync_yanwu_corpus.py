@@ -7,10 +7,10 @@ import sys
 from pathlib import Path
 
 try:
-    from build_recommendation_data import InvalidBattleError, _load_catalog_context
+    from catalog import InvalidCatalogError, load_catalog
     from yanwu_corpus import InvalidYanwuCorpus, sync_corpus
 except ModuleNotFoundError:  # Support ``python -m data.sync_yanwu_corpus``.
-    from .build_recommendation_data import InvalidBattleError, _load_catalog_context
+    from .catalog import InvalidCatalogError, load_catalog
     from .yanwu_corpus import InvalidYanwuCorpus, sync_corpus
 
 
@@ -35,15 +35,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        catalog = _load_catalog_context(str(args.database))
+        catalog = load_catalog(str(args.database))
         path, summary, cache_hit = sync_corpus(
             args.manifest,
             args.cache_dir,
-            catalog_version=catalog.metadata["catalog_version"],
-            default_skill=catalog.metadata["default_skill"],
-            catalog_skills=catalog.names.skills,
+            catalog_version=catalog["catalog_version"],
+            default_skill=catalog["default_skill"],
+            catalog_skills=catalog["skills"],
         )
-    except (InvalidBattleError, InvalidYanwuCorpus, OSError) as exc:
+    except (InvalidCatalogError, InvalidYanwuCorpus, OSError) as exc:
         print(f"Yanwu corpus sync failed: {exc}", file=sys.stderr)
         return 1
 

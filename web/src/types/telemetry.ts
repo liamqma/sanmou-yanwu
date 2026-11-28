@@ -16,16 +16,19 @@ export interface RoundTelemetryEvent {
     skills_support?: string[];
   };
   offered_sets: string[][];
+  /** The model's lineup score for each offered set. */
   paired_scores: number[];
   recommended_index: number;
   chosen_index: number;
-  preference_model_version: string | null;
-  preference_probabilities: number[] | null;
+  /** Kept for the stored schema; the app no longer predicts player preference. */
+  preference_model_version: null;
+  preference_probabilities: null;
 }
 
 export interface RoundTelemetryInput {
   roundNumber: number;
   roundType: RoundType;
+  modelVersion: string;
   poolBefore: {
     heroes: string[];
     skills: string[];
@@ -33,9 +36,7 @@ export interface RoundTelemetryInput {
     skillsSupport?: string[];
   };
   offeredSets: string[][];
-  pairedScores: number[];
+  scores: number[];
   recommendedIndex: number;
   chosenIndex: number;
-  preferenceModelVersion?: string | null;
-  preferenceProbabilities?: number[] | null;
 }

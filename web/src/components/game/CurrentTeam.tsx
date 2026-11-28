@@ -1,24 +1,38 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { Paper, Typography, Box, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText } from '@mui/material';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Paper, Typography, Box, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, LinearProgress, List, ListItem, ListItemText } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import TagList from '../common/TagList';
 import AutocompleteInput from '../common/AutocompleteInput';
-import {
-  recommendSingleHero,
-  recommendTwoSkills,
-  currentRosterScore,
-  type SingleHeroRecommendation,
-  type TwoSkillsRecommendation,
-  type HeroCandidate,
-  type SkillCandidate,
-} from '../../services/recommendationEngine';
+import { LineupSuperseded, runLineup } from '../../services/lineupClient';
+import type { SupportRanking } from '../../services/lineupProtocol';
+import type { CardKind } from '../../services/lineupSearch';
 import { useGame } from '../../context/GameContext';
-import { recommendationData } from '../../data';
 import type { HeroMeta, SkillMeta } from '../../types/game';
 import { teamBuilderInteractionPolicy } from '../../theme/teamBuilderInteractions';
 
 const EMPTY_SUPPORT_SKILLS: string[] = [];
+const SUPPORT_LIST_LENGTH = 10;
+const signed = (value: number): string => `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)}`;
+
+/** A running or finished support recommendation. */
+interface SupportRequest {
+  progress: number;
+  result: SupportRanking | null;
+  error: string | null;
+}
+
+const SupportProgress = ({ request, label }: { request: SupportRequest; label: string }) =>
+  request.error ? (
+    <Alert severity="error">推荐失败：{request.error}</Alert>
+  ) : (
+    <Box role="status" sx={{ py: 1 }}>
+      <Typography variant="body2" color="text.secondary" gutterBottom>
+        正在逐个比较{label}… {Math.round(request.progress * 100)}%
+      </Typography>
+      <LinearProgress variant="determinate" value={request.progress * 100} />
+    </Box>
+  );
 
 interface CurrentTeamProps {
   heroes: string[];
@@ -53,10 +67,17 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   const [editedSkills, setEditedSkills] = useState<string[]>(skills);
   const [heroRecDialog, setHeroRecDialog] = useState(false);
   const [skillRecDialog, setSkillRecDialog] = useState(false);
-  const [heroRecResult, setHeroRecResult] = useState<SingleHeroRecommendation | null>(null);
-  const [skillRecResult, setSkillRecResult] = useState<TwoSkillsRecommendation | null>(null);
+  const [heroRec, setHeroRec] = useState<SupportRequest | null>(null);
+  const [skillRec, setSkillRec] = useState<SupportRequest | null>(null);
   const [selectedRecHero, setSelectedRecHero] = useState<string | null>(null);
   const [selectedRecSkills, setSelectedRecSkills] = useState<string[]>([]);
+  const supportRequestRef = useRef(0);
+  useEffect(
+    () => () => {
+      supportRequestRef.current++;
+    },
+    []
+  );
 
   const normalizedSupportSkills = useMemo(
     () => [...new Set(supportSkills || [])].slice(0, 2),
@@ -98,11 +119,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     () => [...skills, ...normalizedSupportSkills],
     [skills, normalizedSupportSkills],
   );
-
-  // Current-roster score (display units, one decimal) for the whole pool —
-  // main heroes/skills plus any support hero/skills. Uses the same paired-model
-  // scoring convention as the option gains. Shown even before any recommendation.
-  const rosterScore = currentRosterScore(allHeroesForSupport, allSkillsForSupport, recommendationData);
 
   const unchosenSupportHeroes = useMemo(
     () => supportAvailableHeroes.filter((hero) => !allHeroesForSupport.includes(hero)),
@@ -161,32 +177,58 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     setEditedSkills(editedSkills.filter(s => s !== skill));
   };
 
+  /** Rank the candidates in the worker; only the latest request reports back. */
+  const requestSupport = (
+    kind: CardKind,
+    count: number,
+    candidates: string[],
+    update: (request: SupportRequest) => void,
+    done: (recommended: string[]) => void
+  ) => {
+    const requestId = ++supportRequestRef.current;
+    const current = () => requestId === supportRequestRef.current;
+    update({ progress: 0, result: null, error: null });
+    runLineup(
+      'support',
+      { heroes: allHeroesForSupport, skills: allSkillsForSupport, kind, count, candidates },
+      (progress) => current() && update({ progress, result: null, error: null })
+    ).then(
+      (result) => {
+        if (!current()) return;
+        update({ progress: 1, result, error: null });
+        done(result.recommended);
+      },
+      (failure: Error) => {
+        if (current() && !(failure instanceof LineupSuperseded)) {
+          update({ progress: 0, result: null, error: failure.message });
+        }
+      }
+    );
+  };
+
   const handleRecommendHero = () => {
     if (unchosenSupportHeroes.length === 0) return;
-    const result = recommendSingleHero(
-      unchosenSupportHeroes,
-      allHeroesForSupport,
-      allSkillsForSupport,
-      recommendationData,
-      recommendationData.catalog,
-    );
-    setHeroRecResult(result);
-    setSelectedRecHero(result.hero || null);
+    setSelectedRecHero(null);
     setHeroRecDialog(true);
+    // A hero the player searched for meanwhile stays selected.
+    requestSupport('hero', 1, unchosenSupportHeroes, setHeroRec, ([hero]) =>
+      setSelectedRecHero((current) => current ?? hero ?? null)
+    );
   };
 
   const handleRecommendSkills = () => {
     if (openSupportSkillSlots === 0 || unchosenSupportSkills.length === 0) return;
-    const result = recommendTwoSkills(
-      unchosenSupportSkills,
-      allHeroesForSupport,
-      allSkillsForSupport,
-      recommendationData,
-      openSupportSkillSlots === 1 ? 1 : 2,
-    );
-    setSkillRecResult(result);
-    setSelectedRecSkills(result.skills ? [...result.skills] : []);
+    setSelectedRecSkills([]);
     setSkillRecDialog(true);
+    requestSupport('skill', openSupportSkillSlots, unchosenSupportSkills, setSkillRec, (skills) =>
+      setSelectedRecSkills((current) => (current.length ? current : skills))
+    );
+  };
+
+  const closeSupportDialogs = () => {
+    supportRequestRef.current++;
+    setHeroRecDialog(false);
+    setSkillRecDialog(false);
   };
 
   const handleToggleRecSkill = (skill: string) => {
@@ -202,7 +244,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   const handleAddHeroToTeam = () => {
     if (selectedRecHero) {
       dispatch({ type: 'SET_SUPPORT_HERO', hero: selectedRecHero });
-      setHeroRecDialog(false);
+      closeSupportDialogs();
     }
   };
 
@@ -212,7 +254,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         type: 'SET_SUPPORT_SKILLS',
         skills: [...new Set([...normalizedSupportSkills, ...selectedRecSkills])].slice(0, 2),
       });
-      setSkillRecDialog(false);
+      closeSupportDialogs();
     }
   };
 
@@ -249,13 +291,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           >
             当前阵容
           </Typography>
-          <Chip
-            label={`评分 ${rosterScore.toFixed(1)}`}
-            size="small"
-            variant="outlined"
-            data-testid="current-roster-score"
-            sx={{ height: 44, fontSize: { xs: 11, sm: 12 }, fontWeight: 750, fontVariantNumeric: 'tabular-nums', '& .MuiChip-label': { px: { xs: 0.5, sm: 0.75 } } }}
-          />
           {editable && availableHeroes && availableSkills && onUpdateTeam && (
             <Box sx={{ display: 'flex', gap: 0.5, minWidth: 0 }}>
               {editMode && (
@@ -435,7 +470,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       {/* Hero Recommendation Dialog */}
       <Dialog
         open={editable && heroRecDialog}
-        onClose={() => setHeroRecDialog(false)}
+        onClose={closeSupportDialogs}
         maxWidth="sm"
         fullWidth
         sx={teamBuilderInteractionPolicy}
@@ -455,20 +490,22 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               heroMetadata={seasonHeroMetadata}
             />
           </Box>
-          {heroRecResult && heroRecResult.hero ? (
+          {!heroRec?.result ? (
+            heroRec && <SupportProgress request={heroRec} label="候选武将" />
+          ) : heroRec.result.single.length > 0 ? (
             <>
               <Alert severity="success" sx={{ mb: 2 }}>
-                推荐武将：<strong>{heroRecResult.hero}</strong>
+                推荐武将：<strong>{heroRec.result.recommended[0]}</strong>
               </Alert>
               <Typography component="div" variant="subtitle2" gutterBottom>
-                或从推荐列表中选择：
+                或从推荐列表中选择（分数为带上后阵容评分的变化）：
               </Typography>
               <List dense>
-                {heroRecResult.analysis.map((candidate: HeroCandidate, idx: number) => {
-                  const isSelected = selectedRecHero === candidate.hero;
+                {heroRec.result.single.slice(0, SUPPORT_LIST_LENGTH).map(({ cards: [hero], lineup }) => {
+                  const isSelected = selectedRecHero === hero;
                   return (
                     <ListItem
-                      key={idx}
+                      key={hero}
                       sx={{
                         py: 0.5,
                         cursor: 'pointer',
@@ -479,23 +516,17 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                         '&:hover': { bgcolor: 'action.hover' },
                         mb: 0.5,
                       }}
-                      onClick={() => setSelectedRecHero(candidate.hero)}
+                      onClick={() => setSelectedRecHero(hero)}
                     >
                       <Chip
-                        label={candidate.hero}
+                        label={hero}
                         color={isSelected ? 'primary' : 'default'}
                         size="small"
                         sx={{ mr: 1, minWidth: 80 }}
                       />
                       <ListItemText
-                        primary={`综合评分：${candidate.finalScore.toFixed(1)}`}
-                        secondary={[
-                          candidate.details.individualScore != null && `个体强度：${candidate.details.individualScore.toFixed(1)}`,
-                          candidate.details.pairScore != null && `武将配合：${candidate.details.pairScore.toFixed(1)}`,
-                          candidate.details.skillHeroScore != null && `战法配合：${candidate.details.skillHeroScore.toFixed(1)}`,
-                        ].filter(Boolean).join(' | ')}
+                        primary={`阵容评分 ${signed(lineup.score - heroRec.result!.base)}`}
                         primaryTypographyProps={{ variant: 'body2' }}
-                        secondaryTypographyProps={{ variant: 'caption' }}
                       />
                     </ListItem>
                   );
@@ -507,7 +538,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setHeroRecDialog(false)}>关闭</Button>
+          <Button onClick={closeSupportDialogs}>关闭</Button>
           <Button
             variant="contained"
             onClick={handleAddHeroToTeam}
@@ -521,7 +552,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       {/* Skill Recommendation Dialog */}
       <Dialog
         open={editable && skillRecDialog}
-        onClose={() => setSkillRecDialog(false)}
+        onClose={closeSupportDialogs}
         maxWidth="sm"
         fullWidth
         sx={teamBuilderInteractionPolicy}
@@ -555,22 +586,24 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               </Box>
             )}
           </Box>
-          {skillRecResult && skillRecResult.skills.length > 0 ? (
+          {!skillRec?.result ? (
+            skillRec && <SupportProgress request={skillRec} label="候选战法" />
+          ) : skillRec.result.single.length > 0 ? (
             <>
               <Alert severity="success" sx={{ mb: 2 }}>
-                推荐战法：{skillRecResult.skills.map((s: string, i: number) => (
-                  <Chip key={i} label={s} color="secondary" size="small" sx={{ ml: 0.5 }} />
+                推荐战法：{skillRec.result.recommended.map((skill) => (
+                  <Chip key={skill} label={skill} color="secondary" size="small" sx={{ ml: 0.5 }} />
                 ))}
               </Alert>
               <Typography component="div" variant="subtitle2" gutterBottom>
-                或从推荐列表中选择：
+                或从推荐列表中选择（分数为单独带上后阵容评分的变化）：
               </Typography>
               <List dense>
-                {skillRecResult.analysis.map((candidate: SkillCandidate, idx: number) => {
-                  const isSelected = selectedRecSkills.includes(candidate.skill);
+                {skillRec.result.single.slice(0, SUPPORT_LIST_LENGTH).map(({ cards: [skill], lineup }) => {
+                  const isSelected = selectedRecSkills.includes(skill);
                   return (
                     <ListItem
-                      key={idx}
+                      key={skill}
                       sx={{
                         py: 0.5,
                         cursor: 'pointer',
@@ -581,22 +614,17 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                         '&:hover': { bgcolor: 'action.hover' },
                         mb: 0.5,
                       }}
-                      onClick={() => handleToggleRecSkill(candidate.skill)}
+                      onClick={() => handleToggleRecSkill(skill)}
                     >
                       <Chip
-                        label={candidate.skill}
+                        label={skill}
                         color={isSelected ? 'secondary' : 'default'}
                         size="small"
                         sx={{ mr: 1, minWidth: 80 }}
                       />
                       <ListItemText
-                        primary={`综合评分：${candidate.finalScore.toFixed(1)}`}
-                        secondary={[
-                          candidate.details.individualScore != null && `个体强度：${candidate.details.individualScore.toFixed(1)}`,
-                          candidate.details.skillHeroScore != null && `武将配合：${candidate.details.skillHeroScore.toFixed(1)}`,
-                        ].filter(Boolean).join(' | ')}
+                        primary={`阵容评分 ${signed(lineup.score - skillRec.result!.base)}`}
                         primaryTypographyProps={{ variant: 'body2' }}
-                        secondaryTypographyProps={{ variant: 'caption' }}
                       />
                     </ListItem>
                   );
@@ -608,7 +636,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSkillRecDialog(false)}>关闭</Button>
+          <Button onClick={closeSupportDialogs}>关闭</Button>
           <Button
             variant="contained"
             color="secondary"

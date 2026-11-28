@@ -17,8 +17,8 @@ and project orientation.
 - Round 6: Select 1 skill set from 3 options (each set contains 3 skills)
 - **Optional support pick:** After Round 6, the current-team panel
   may add 1 unchosen hero and 2 unchosen non-hero skills. The support choices
-  use the existing `recommendSingleHero` / `recommendTwoSkills`
-  recommendations and are carried through the later rounds. Support heroes
+  are recommended by the lineup model and are carried through the later
+  rounds. Support heroes
   unlock cumulatively by introduction season in S1–S3 (S1 only, S1–S2, then
   S1–S3); from S4 onward, heroes from every season are available, including
   later seasons. Automatic recommendations and manual support search use the

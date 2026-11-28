@@ -95,7 +95,7 @@ async function setupGameAndCompleteRound1(page) {
 
   // Get recommendation, select first set, confirm
   await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-  await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 60000 });
   await page.getByRole('button', { name: '选择本组' }).first().click();
   const confirmButton = page.getByRole('button', { name: '确认选择并进入下一轮' });
   await expect(confirmButton).toBeEnabled({ timeout: 5000 });
@@ -155,7 +155,7 @@ test.describe('Support Hero & Skills', () => {
     const dialog = page.getByRole('dialog');
 
     // Wait for the recommendation to load — it pre-selects 2 skills
-    await expect(dialog.getByText(/本次已选 2\/2 个战法/)).toBeVisible({ timeout: 5000 });
+    await expect(dialog.getByText(/本次已选 2\/2 个战法/)).toBeVisible({ timeout: 60000 });
 
     // Remove the pre-selected skills so we can pick our own
     const preSelectedChips = dialog.locator('.MuiChip-deleteIcon');
@@ -251,7 +251,7 @@ test.describe('Support Hero & Skills', () => {
     await page.getByRole('button', { name: '推荐支援战法' }).first().click();
     await expect(page.getByRole('heading', { name: '推荐支援战法' })).toBeVisible({ timeout: 5000 });
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText(/本次已选 2\/2 个战法/)).toBeVisible({ timeout: 5000 });
+    await expect(dialog.getByText(/本次已选 2\/2 个战法/)).toBeVisible({ timeout: 60000 });
     const preSelectedChips = dialog.locator('.MuiChip-deleteIcon');
     while (await preSelectedChips.count() > 0) {
       await preSelectedChips.first().click();

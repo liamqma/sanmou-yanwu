@@ -1,24 +1,12 @@
-import {
-  recommendHeroSet,
-  recommendSkillSet,
-  getAnalytics,
-  type OptionAnalysis,
-} from './recommendationEngine';
-import { database, recommendationData } from '../data';
-import type { DatabaseItems, RoundType, GameState } from '../types/game';
-import type { PreferencePrediction } from '../types/telemetryData';
-import { getCachedTelemetryData, preloadTelemetryData } from './telemetryData';
-import { predictPlayerPreference } from './preferenceModel';
+import { database } from '../data';
+import type { DatabaseItems, RoundType, GameState, Recommendation } from '../types/game';
 import { heroRankingRank, skillRankingRank } from '../utils/rankings';
+import { runLineup } from './lineupClient';
 
 const compareChineseNames = (a: string, b: string): number =>
   a.localeCompare(b, 'zh-Hans-CN');
 
-/**
- * In-memory recommendation shim (nothing in this module is HTTP). All scoring
- * logic runs locally against the generated
- * `recommendation_data.json` artifact via `recommendationEngine`.
- */
+/** Nothing in this module is HTTP: the catalog is bundled and the lineup model runs in a worker. */
 export const api = {
   /**
    * Get all available heroes and skills from the merged database.
@@ -117,87 +105,41 @@ export const api = {
   },
 
   /**
-   * Recommend one of the three offered option sets for the current round.
-   *
-   * The score of each option is the *marginal relative roster-strength gain* it
-   * adds to the current pool under the learned paired model — there is no
-   * opponent input, so this is not an opponent-specific win probability.
+   * Recommend one of the three offered sets: the one whose cards give the pool
+   * its best three-team lineup under the lineup model.
    */
   getRecommendation: async (
     roundType: RoundType,
     availableSets: string[][],
-    gameState: GameState
-  ): Promise<{
-    success: boolean;
-    recommendation: {
-      recommended_set_index: number;
-      recommended_set: string[];
-      analysis: OptionAnalysis[];
-      preference: PreferencePrediction | null;
-    };
-    round_info: {
-      round_number: number;
-      round_type: RoundType;
-      current_heroes: string[];
-      current_skills: string[];
-    };
-  }> => {
-    const currentHeroes = [
-      ...(gameState.current_heroes || []),
-      ...(gameState.support_hero ? [gameState.support_hero] : []),
-    ];
-    const currentSkills = [
-      ...(gameState.current_skills || []),
-      ...(gameState.support_skills || []),
-    ];
-
-    const rec =
-      roundType === 'hero'
-        ? recommendHeroSet(availableSets, currentHeroes, recommendationData, currentSkills)
-        : recommendSkillSet(availableSets, currentHeroes, currentSkills, recommendationData);
-    const pairedScores = [0, 1, 2].map(
-      (index) =>
-        rec.analysis.find((option) => option.set_index === index)?.final_score ??
-        0
+    gameState: GameState,
+    onProgress?: (progress: number) => void
+  ): Promise<Recommendation> => {
+    const result = await runLineup(
+      'pick',
+      {
+        heroes: [
+          ...(gameState.current_heroes || []),
+          ...(gameState.support_hero ? [gameState.support_hero] : []),
+        ],
+        skills: [...(gameState.current_skills || []), ...(gameState.support_skills || [])],
+        options: availableSets,
+        kind: roundType,
+      },
+      onProgress
     );
-    const telemetryData = getCachedTelemetryData();
-    if (!telemetryData) preloadTelemetryData();
-    const preference = telemetryData
-      ? predictPlayerPreference(telemetryData, {
-          roundNumber: gameState.round_number || 1,
-          roundType,
-          poolBefore: {
-            heroes: [...(gameState.current_heroes || [])],
-            skills: [...(gameState.current_skills || [])],
-            ...(gameState.support_hero
-              ? { heroSupport: gameState.support_hero }
-              : {}),
-            ...(gameState.support_skills?.length
-              ? { skillsSupport: [...gameState.support_skills] }
-              : {}),
-          },
-          offeredSets: availableSets,
-          pairedScores,
-        })
-      : null;
-
+    const best = result.options[result.recommended].score;
     return {
-      success: true,
-      recommendation: {
-        recommended_set_index: rec.recommended_set,
-        recommended_set: availableSets[rec.recommended_set] || [],
-        analysis: rec.analysis,
-        preference,
-      },
-      round_info: {
-        round_number: gameState.round_number || 1,
-        round_type: roundType,
-        current_heroes: currentHeroes,
-        current_skills: currentSkills,
-      },
+      recommended_set_index: result.recommended,
+      recommended_set: availableSets[result.recommended] || [],
+      analysis: result.options.map(({ score, teams }, index) => ({
+        set_index: index,
+        score,
+        gap: score - best,
+        teams,
+      })),
+      model_version: result.version,
+      unknown: result.unknown,
+      round_info: { round_number: gameState.round_number || 1, round_type: roundType },
     };
   },
-
-  /** Analytics-page payload derived from the generated artifact. */
-  getAnalytics: () => getAnalytics(recommendationData, database),
 };

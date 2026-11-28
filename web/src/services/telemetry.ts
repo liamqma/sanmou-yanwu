@@ -1,4 +1,4 @@
-import { recommendationData } from '../data';
+import { CATALOG_VERSION } from '../data';
 import type { RoundTelemetryEvent, RoundTelemetryInput } from '../types/telemetry';
 import {
   getItemsPerSet,
@@ -15,8 +15,8 @@ import {
 
 const ENDPOINT = '/api/telemetry/rounds';
 const MAX_UPLOAD_BATCH = 8;
-const MODEL_VERSION = `${recommendationData.schema.version}:${recommendationData.battle_counts.corpus_version}:${recommendationData.model.scoring_version}`;
-const CATALOG_VERSION = recommendationData.catalog.catalog_version;
+// The weekly telemetry builder rejects any other shape.
+const MODEL_VERSION_RE = /^[1-9]\d*:[0-9a-f]{16}$/;
 
 let flushInFlight: Promise<void> | null = null;
 let initialized = false;
@@ -42,30 +42,9 @@ const isValidInput = (input: RoundTelemetryInput): boolean => {
           ...input.poolBefore.skills,
           ...(input.poolBefore.skillsSupport || []),
       ];
-  const preferenceAbsent =
-    input.preferenceModelVersion == null &&
-    input.preferenceProbabilities == null;
-  const preferencePresent =
-    typeof input.preferenceModelVersion === 'string' &&
-    /^preference-v[1-9]\d*:[0-9a-f]{16}$/.test(
-      input.preferenceModelVersion
-    ) &&
-    Array.isArray(input.preferenceProbabilities) &&
-    input.preferenceProbabilities.length === 3 &&
-    input.preferenceProbabilities.every(
-      (probability) =>
-        Number.isFinite(probability) &&
-        probability >= 0 &&
-        probability <= 1
-    ) &&
-    Math.abs(
-      input.preferenceProbabilities.reduce(
-        (sum, probability) => sum + probability,
-        0
-      ) - 1
-    ) <= 1e-6;
 
   return (
+    MODEL_VERSION_RE.test(input.modelVersion) &&
     roundType === input.roundType &&
     input.offeredSets.length === 3 &&
     input.offeredSets.every(
@@ -73,15 +52,15 @@ const isValidInput = (input: RoundTelemetryInput): boolean => {
     ) &&
     new Set(offeredItems).size === offeredItems.length &&
     !offeredItems.some((item) => occupiedItems.includes(item)) &&
-    input.pairedScores.length === 3 &&
-    input.pairedScores.every(Number.isFinite) &&
+    input.scores.length === 3 &&
+    input.scores.every(Number.isFinite) &&
     Number.isInteger(input.recommendedIndex) &&
     input.recommendedIndex >= 0 &&
     input.recommendedIndex <= 2 &&
+    !input.scores.some((score) => score > input.scores[input.recommendedIndex] + 1e-9) &&
     Number.isInteger(input.chosenIndex) &&
     input.chosenIndex >= 0 &&
-    input.chosenIndex <= 2 &&
-    (preferenceAbsent || preferencePresent)
+    input.chosenIndex <= 2
   );
 };
 
@@ -97,7 +76,7 @@ export const createRoundTelemetryEvent = (
     round_number: input.roundNumber,
     round_type: input.roundType,
     schema_version: 1,
-    model_version: MODEL_VERSION,
+    model_version: input.modelVersion,
     catalog_version: CATALOG_VERSION,
     pool_before: {
       heroes: [...input.poolBefore.heroes],
@@ -110,13 +89,11 @@ export const createRoundTelemetryEvent = (
         : {}),
     },
     offered_sets: input.offeredSets.map((set) => [...set]),
-    paired_scores: [...input.pairedScores],
+    paired_scores: [...input.scores],
     recommended_index: input.recommendedIndex,
     chosen_index: input.chosenIndex,
-    preference_model_version: input.preferenceModelVersion ?? null,
-    preference_probabilities: input.preferenceProbabilities
-      ? [...input.preferenceProbabilities]
-      : null,
+    preference_model_version: null,
+    preference_probabilities: null,
   };
 };
 

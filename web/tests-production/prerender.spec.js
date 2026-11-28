@@ -102,11 +102,11 @@ test.describe('with JavaScript disabled', () => {
     await expect(page.getByRole('heading', { name: '初始武将 (0/4)' }))
       .toBeVisible();
 
+    // The statistics themselves load in the browser; the page still says what it is.
     await page.goto('/analytics');
     await expect(
-      page.getByRole('heading', { name: '历史战报分析' })
+      page.getByText('看看游戏最常提供哪些武将、战法，以及玩家最常选择什么。')
     ).toBeVisible();
-    await expect(page.getByText(/已记录的 \d+ 场对局/)).toBeVisible();
 
     await page.goto('/guides/yanwu');
     await expect(page.getByRole('heading', { name: '强队阵容' })).toBeVisible();

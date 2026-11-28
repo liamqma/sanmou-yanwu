@@ -2,15 +2,23 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { catalogVersion } from './src/catalogVersion.js';
 
 const DATABASE_MODULE_ID = 'virtual:game-database';
 const RESOLVED_DATABASE_MODULE_ID = `\0${DATABASE_MODULE_ID}`;
+const CATALOG_VERSION_MODULE_ID = 'virtual:catalog-version';
+const RESOLVED_CATALOG_VERSION_MODULE_ID = `\0${CATALOG_VERSION_MODULE_ID}`;
+const LINEUP_MODEL_MODULE_ID = 'virtual:lineup-model';
+const RESOLVED_LINEUP_MODEL_MODULE_ID = `\0${LINEUP_MODEL_MODULE_ID}`;
 const YANWU_GUIDE_MODULE_ID = 'virtual:yanwu-guide';
 const RESOLVED_YANWU_GUIDE_MODULE_ID = `\0${YANWU_GUIDE_MODULE_ID}`;
 const GAME_ASSETS_MODULE_ID = 'virtual:game-assets-manifest';
 const RESOLVED_GAME_ASSETS_MODULE_ID = `\0${GAME_ASSETS_MODULE_ID}`;
 const DATABASE_PATH = fileURLToPath(
   new URL('./public/game-data/database.json', import.meta.url)
+);
+const LINEUP_MODEL_PATH = fileURLToPath(
+  new URL('./public/game-data/lineup_model.json', import.meta.url)
 );
 const GAME_ASSETS_PATH = fileURLToPath(
   new URL('./public/game-assets/manifest.json', import.meta.url)
@@ -26,6 +34,8 @@ const gameDatabase = () => ({
   enforce: 'pre',
   resolveId(id) {
     if (id === DATABASE_MODULE_ID) return RESOLVED_DATABASE_MODULE_ID;
+    if (id === CATALOG_VERSION_MODULE_ID) return RESOLVED_CATALOG_VERSION_MODULE_ID;
+    if (id === LINEUP_MODEL_MODULE_ID) return RESOLVED_LINEUP_MODEL_MODULE_ID;
     if (id === YANWU_GUIDE_MODULE_ID) return RESOLVED_YANWU_GUIDE_MODULE_ID;
     if (id === GAME_ASSETS_MODULE_ID) return RESOLVED_GAME_ASSETS_MODULE_ID;
   },
@@ -35,8 +45,15 @@ const gameDatabase = () => ({
       const manifest = JSON.parse(readFileSync(GAME_ASSETS_PATH, 'utf8'));
       return `export default ${JSON.stringify(manifest)};`;
     }
+    if (id === RESOLVED_LINEUP_MODEL_MODULE_ID) {
+      // The weights are fetched at run time; the page itself only shows these two facts.
+      this.addWatchFile(LINEUP_MODEL_PATH);
+      const { version, battles } = JSON.parse(readFileSync(LINEUP_MODEL_PATH, 'utf8'));
+      return `export default ${JSON.stringify({ version, battles })};`;
+    }
     if (
       id !== RESOLVED_DATABASE_MODULE_ID &&
+      id !== RESOLVED_CATALOG_VERSION_MODULE_ID &&
       id !== RESOLVED_YANWU_GUIDE_MODULE_ID
     ) {
       return;
@@ -44,6 +61,9 @@ const gameDatabase = () => ({
 
     this.addWatchFile(DATABASE_PATH);
     const database = JSON.parse(readFileSync(DATABASE_PATH, 'utf8'));
+    if (id === RESOLVED_CATALOG_VERSION_MODULE_ID) {
+      return `export default ${JSON.stringify(catalogVersion(database))};`;
+    }
     if (id === RESOLVED_YANWU_GUIDE_MODULE_ID) {
       return `export default ${JSON.stringify(database.yanwuGuide ?? {})};`;
     }

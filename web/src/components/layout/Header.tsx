@@ -18,7 +18,7 @@ import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
 import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined';
 import UpdateIcon from '@mui/icons-material/Update';
 import { Link as RouterLink } from 'react-router-dom';
-import { recommendationData } from '../../data';
+import { TRAINING_BATTLES } from '../../data';
 
 interface HeaderProps {
   currentPath: string;
@@ -81,7 +81,7 @@ const Header = ({
   hasProgress,
   onResetProgress,
 }: HeaderProps) => {
-  const totalBattles = recommendationData.battle_counts.total_battles ?? 0;
+  const totalBattles = TRAINING_BATTLES;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
