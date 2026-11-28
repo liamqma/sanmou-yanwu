@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const database = require('../public/game-data/database.json');
-const telemetry = require('../public/game-data/telemetry_data.json');
+const lineupModel = require('../public/game-data/lineup_model.json');
 const { seedGame } = require('./helpers');
 
 // Merged database (see web/scripts/merge_database.js):
@@ -127,7 +127,7 @@ test.describe('Game Rounds - Skill Selection', () => {
     // Get recommendation, select the recommended set, and confirm round 1
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
     // Wait for recommendation to appear, then select the first set
-    await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 60000 });
     await page.getByRole('button', { name: '选择本组' }).first().click();
     const confirmButton = page.getByRole('button', { name: '确认选择并进入下一轮' });
     await expect(confirmButton).toBeEnabled({ timeout: 5000 });
@@ -148,19 +148,14 @@ test.describe('Game Rounds - Skill Selection', () => {
       ],
       chosen_index: 0,
     });
-    expect(loggedRounds[0].paired_scores).toHaveLength(3);
-    expect(loggedRounds[0].recommended_index).toBeGreaterThanOrEqual(0);
-    expect(loggedRounds[0].recommended_index).toBeLessThanOrEqual(2);
-    expect(loggedRounds[0].preference_model_version).toBe(
-      telemetry.preference_model.version
-    );
-    expect(loggedRounds[0].preference_probabilities).toHaveLength(3);
-    expect(
-      loggedRounds[0].preference_probabilities.reduce(
-        (total, probability) => total + probability,
-        0
-      )
-    ).toBeCloseTo(1, 3);
+    // The event carries the lineup model's scores.
+    const [event] = loggedRounds;
+    expect(event.model_version).toBe(lineupModel.version);
+    expect(event.model_version).toMatch(/^[1-9]\d*:[0-9a-f]{16}$/);
+    expect(event.paired_scores).toHaveLength(3);
+    expect(Math.max(...event.paired_scores)).toBe(event.paired_scores[event.recommended_index]);
+    expect(event.preference_model_version).toBeNull();
+    expect(event.preference_probabilities).toBeNull();
 
     // ── Round 2 (skill round) - verify only orange skills appear ──
     await expect(
@@ -254,7 +249,7 @@ test.describe('Game Rounds - Skill Selection', () => {
     ).toHaveCount(1);
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-    await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 60000 });
     await page.getByRole('button', { name: '选择本组' }).first().click();
     await page.getByRole('button', { name: '确认选择并进入下一轮' }).click();
 
@@ -275,7 +270,7 @@ test.describe('Game Rounds - Skill Selection', () => {
 
     await expect(page.getByText('(3/3)')).toHaveCount(3);
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-    await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 60000 });
     await page.getByRole('button', { name: '选择本组' }).first().click();
     await page.getByRole('button', { name: '确认选择并进入下一轮' }).click();
 

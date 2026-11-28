@@ -1,5 +1,6 @@
 import { useState, type ComponentType, type PropsWithChildren, type ReactNode } from 'react';
 import {
+  Alert,
   Box,
   Button,
   ButtonBase,
@@ -21,7 +22,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/react';
 import GameCardArt from '../common/GameCardArt';
-import type { LayoutEvaluation } from '../../services/teamAllocation';
+import type { LayoutEvaluation } from '../../services/lineupProtocol';
 import type {
   LayoutPosition,
   MoveSource,
@@ -126,7 +127,7 @@ interface SlotProps {
 const UnseenMark = ({ onPortrait }: { onPortrait: boolean }) => (
   <Typography
     component="span"
-    aria-label="未经验证的组合"
+    aria-label="模型没见过的卡"
     sx={{
       position: 'absolute',
       ...(onPortrait
@@ -140,7 +141,7 @@ const UnseenMark = ({ onPortrait }: { onPortrait: boolean }) => (
       whiteSpace: 'nowrap',
     }}
   >
-    未经验证
+    未见过
   </Typography>
 );
 
@@ -249,6 +250,11 @@ interface TeamBuilderProps {
   evaluation: LayoutEvaluation;
   mode: TeamBuilderMode;
   allocating: boolean;
+  /** How far the allocation has got, from 0 to 1. */
+  progress: number;
+  /** Why the lineup model could not allocate. */
+  error: string | null;
+  onRetry: () => void;
   heroes: string[];
   skills: string[];
   placed: { heroes: Set<string>; skills: Set<string> };
@@ -257,8 +263,6 @@ interface TeamBuilderProps {
   onMove: OnMove;
   onRestoreAuto: () => void;
   onFillRemaining: () => void;
-  /** The last fill found nothing that can go into the empty slots. */
-  nothingToFill: boolean;
 }
 
 /** Three teams allocated from 当前阵容; drag or tap to adjust. */
@@ -267,6 +271,9 @@ const TeamBuilder = ({
   evaluation,
   mode,
   allocating,
+  progress,
+  error,
+  onRetry,
   heroes,
   skills,
   placed,
@@ -275,7 +282,6 @@ const TeamBuilder = ({
   onMove,
   onRestoreAuto,
   onFillRemaining,
-  nothingToFill,
 }: TeamBuilderProps) => {
   const [picker, setPicker] = useState<PickerState | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -300,6 +306,8 @@ const TeamBuilder = ({
     setPickerOpen(false);
   };
 
+  const unknownHeroes = new Set(evaluation.unknown.heroes);
+  const unknownSkills = new Set(evaluation.unknown.skills);
   const slots = layout.flat();
   const canFill =
     (slots.some((slot) => !slot.hero) && heroes.some((hero) => !placed.heroes.has(hero))) ||
@@ -325,11 +333,13 @@ const TeamBuilder = ({
           />
         </>
       )}
-      {allocating && <CircularProgress size={16} aria-label="正在分配" />}
-      {mode === 'manual' && nothingToFill && (
-        <Typography variant="caption" color="text.secondary" role="status">
-          剩余卡片没有可用组合
-        </Typography>
+      {allocating && (
+        <>
+          <CircularProgress size={16} aria-label="正在分配" />
+          <Typography variant="caption" color="text.secondary" role="status">
+            正在分配 {Math.round(progress * 100)}%
+          </Typography>
+        </>
       )}
     </Box>
   );
@@ -338,11 +348,29 @@ const TeamBuilder = ({
     <Paper component="section" aria-label="队伍编排" sx={{ p: { xs: 1.25, sm: 1.5 }, mb: 2, textAlign: 'left' }}>
       {header}
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-        当前阵容中的灰色卡片已编入队伍。可把其余卡片拖入队伍，或点击空位选择。
+        当前阵容中的灰色卡片已编入队伍。可把其余卡片拖入队伍，或点击空位选择。胜率是对常见队伍的预测平均胜率。
       </Typography>
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 1.5 }}
+          action={
+            <Button color="inherit" size="small" onClick={onRetry}>
+              重试
+            </Button>
+          }
+        >
+          自动分配失败：{error}
+        </Alert>
+      )}
+      {(unknownHeroes.size > 0 || unknownSkills.size > 0) && (
+        <Typography variant="caption" color="text.secondary" role="note" sx={{ display: 'block', mb: 1 }}>
+          标有「未见过」的卡不在模型的战报里，按一张普通的未知卡估算。
+        </Typography>
+      )}
       <Box sx={{ display: 'grid', gap: 1 }}>
         {layout.map((team, t) => {
-          const result = evaluation.teams[t];
+          const strength = evaluation.strengths[t];
           return (
             <Box
               key={TEAM_NAMES[t]}
@@ -371,17 +399,14 @@ const TeamBuilder = ({
                 <Typography component="h3" variant="subtitle2" sx={{ fontWeight: 800 }}>
                   {TEAM_NAMES[t]}
                 </Typography>
-                {result.score === null ? (
+                {team.every((slot) => !slot.hero) ? (
                   <Typography variant="caption" color="text.secondary">空</Typography>
                 ) : (
-                  <>
+                  strength !== null && (
                     <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                      评分 {(result.score * 10).toFixed(1)}
+                      胜率 {percent(strength)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                      胜率 {percent(result.winChance)}
-                    </Typography>
-                  </>
+                  )
                 )}
               </Box>
               {team.map((slot, s) => (
@@ -393,7 +418,7 @@ const TeamBuilder = ({
                       position={{ team: t, slot: s, field: 'hero' }}
                       label={`${TEAM_NAMES[t]}第${s + 1}位武将：${slot.hero ?? '空'}`}
                       support={Boolean(slot.hero && supportItems.has(slot.hero))}
-                      unseen={Boolean(slot.hero && evaluation.unseenHeroes.has(slot.hero))}
+                      unseen={Boolean(slot.hero && unknownHeroes.has(slot.hero))}
                       onOpen={() =>
                         openPicker({
                           kind: 'hero',
@@ -416,7 +441,7 @@ const TeamBuilder = ({
                           label={`${TEAM_NAMES[t]}${slot.hero ?? '空位'}战法${field + 1}：${skill ?? '空'}`}
                           disabled={!slot.hero}
                           support={Boolean(skill && supportItems.has(skill))}
-                          unseen={Boolean(skill && evaluation.unseenSkills.has(skill))}
+                          unseen={Boolean(skill && unknownSkills.has(skill))}
                           onOpen={() =>
                             openPicker({
                               kind: 'skill',

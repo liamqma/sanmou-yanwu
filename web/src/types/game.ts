@@ -4,6 +4,8 @@
  */
 import type { Dispatch } from 'react';
 import type { HeroRanking, SkillCategory, SkillRanking } from './domain';
+import type { UnknownCards } from '../services/lineupProtocol';
+import type { TeamView } from '../services/lineupSearch';
 
 export type RoundType = 'hero' | 'skill';
 
@@ -33,12 +35,10 @@ export interface GameState {
 
 /** Per-hero / per-skill display metadata derived from database.json. */
 export interface HeroMeta {
-  /** Presentation-only tier; recommendation scoring does not consume it. */
   ranking?: HeroRanking;
   season?: number;
 }
 export interface SkillMeta {
-  /** Presentation-only tier; recommendation scoring does not consume it. */
   ranking?: SkillRanking;
   category?: SkillCategory;
   season?: number;
@@ -57,18 +57,24 @@ export interface DatabaseItems {
   maxSeason: number;
 }
 
-/**
- * Formatted recommendation produced by `api.getRecommendation` and stored in
- * state. `analysis` is the per-option roster-strength analysis (see
- * `services/recommendationEngine` → `OptionAnalysis`); typed as `unknown[]` here
- * to avoid a cross-import cycle — `AnalysisGrid` narrows it.
- */
+/** The best lineup the model finds when one offered set joins the pool. */
+export interface OptionAnalysis {
+  set_index: number;
+  /** Lineup score; only differences between options are meaningful. */
+  score: number;
+  /** `score` minus the best option's score: 0 for the recommended set. */
+  gap: number;
+  teams: TeamView[];
+}
+
+/** Recommendation produced by `api.getRecommendation` and stored in state. */
 export interface Recommendation {
-  recommended_set_index?: number;
-  recommended_set?: string[];
-  analysis?: unknown[];
-  round_info?: { round_number: number; round_type: RoundType; [key: string]: unknown };
-  [key: string]: unknown;
+  recommended_set_index: number;
+  recommended_set: string[];
+  analysis: OptionAnalysis[];
+  model_version: string;
+  unknown: UnknownCards;
+  round_info: { round_number: number; round_type: RoundType };
 }
 
 export interface ReducerState {

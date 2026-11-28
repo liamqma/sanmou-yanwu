@@ -8,7 +8,6 @@ import type {
   DatabaseItems,
 } from '../types/game';
 import { initializeTelemetry } from '../services/telemetry';
-import { preloadTelemetryData } from '../services/telemetryData';
 
 const GameContext = createContext<GameContextValue | undefined>(undefined);
 
@@ -362,7 +361,6 @@ export const GameProvider = ({ children, databaseItems }: GameProviderProps) => 
 
   useEffect(() => {
     initializeTelemetry();
-    preloadTelemetryData();
   }, []);
 
   // Load database items from props (passed from index.tsx)

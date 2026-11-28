@@ -1,9 +1,9 @@
 # Web app
 
-The React app (Vite, MUI, TypeScript) for the draft advisor. Recommendation and
-analytics run in the browser: `src/services/api.ts` is an in-memory shim, not
-an HTTP client. The Pages Function in `functions/api/` only writes telemetry
-to D1.
+The React app (Vite, MUI, TypeScript) for the draft advisor. Recommendations
+run in the browser: a Web Worker loads the lineup model from
+`public/game-data/` and searches with it. The Pages Function in
+`functions/api/` only writes telemetry to D1.
 
 ## Getting started
 
@@ -23,7 +23,7 @@ pnpm build       # Prerendered build in build/ for Cloudflare Pages
 | Route | Page |
 |---|---|
 | `/` | Draft advisor |
-| `/analytics` | Model and telemetry analytics |
+| `/analytics` | Anonymous choice statistics from telemetry |
 | `/contributors` | Contributor leaderboard (uploads closed, frozen) |
 | `/guides/yanwu` | 演武攻略 guide |
 
@@ -40,8 +40,3 @@ pnpm build       # Prerendered build in build/ for Cloudflare Pages
 3. For the scheduled telemetry workflow, add the `CLOUDFLARE_API_TOKEN` secret (D1 Read
    and Edit), add the `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_D1_DATABASE_NAME`
    variables, and let GitHub Actions write repository contents.
-
-## Debugging recommendations
-
-On the draft page, run `copy(sanmouDebug())` in the browser console, then paste
-the JSON into an agent together with the result you expected.

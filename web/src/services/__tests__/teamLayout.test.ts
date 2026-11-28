@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest';
 import {
   applyMove,
   emptyLayout,
+  layoutCards,
+  layoutFromTeams,
   layoutPoolKey,
   normalizeLayout,
   parseStoredTeamBuilder,
@@ -101,8 +103,37 @@ describe('normalizeLayout', () => {
 describe('storage helpers', () => {
   test('pool key ignores order and parse rejects other versions', () => {
     expect(layoutPoolKey(['B', 'A'], ['y', 'x'])).toBe(layoutPoolKey(['A', 'B'], ['x', 'y']));
-    const stored = { version: 3, mode: 'manual', poolKey: 'k', layout: emptyLayout() };
+    const stored = { version: 4, mode: 'manual', poolKey: 'k', layout: emptyLayout() };
     expect(parseStoredTeamBuilder(stored)).toEqual(stored);
-    expect(parseStoredTeamBuilder({ ...stored, version: 2 })).toBeNull();
+    expect(parseStoredTeamBuilder({ ...stored, version: 3 })).toBeNull();
+  });
+});
+
+describe('lineup model layouts', () => {
+  const teams = [
+    { heroes: ['A', '', 'B'], skills: ['x', '', 'orphan', '', '', 'y'], strength: 0.2 },
+    { heroes: ['C', 'D', 'E'], skills: ['p', 'q', 'r', 's', 't', 'u'], strength: 0.6 },
+    { heroes: ['', '', ''], skills: ['', '', '', '', '', ''], strength: null },
+  ];
+
+  test('keeps the model order, or puts the strongest team first', () => {
+    expect(layoutFromTeams(teams, false).map((team) => team[0].hero)).toEqual(['A', 'C', null]);
+    expect(layoutFromTeams(teams, true).map((team) => team[0].hero)).toEqual(['C', 'A', null]);
+  });
+
+  test('never places a skill in a slot without a hero', () => {
+    expect(layoutFromTeams(teams, false)[0]).toEqual([
+      { hero: 'A', skills: ['x', null] },
+      { hero: null, skills: [null, null] },
+      { hero: 'B', skills: [null, 'y'] },
+    ]);
+  });
+
+  test('round-trips to the nine hero and eighteen skill slots the model takes', () => {
+    const cards = layoutCards(layoutFromTeams(teams, false));
+    expect(cards.layoutHeroes).toEqual(['A', '', 'B', 'C', 'D', 'E', '', '', '']);
+    expect(cards.layoutSkills).toEqual([
+      'x', '', '', '', '', 'y', 'p', 'q', 'r', 's', 't', 'u', '', '', '', '', '', '',
+    ]);
   });
 });

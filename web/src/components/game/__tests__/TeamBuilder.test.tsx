@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
-import type { LayoutEvaluation } from '../../../services/teamAllocation';
+import type { LayoutEvaluation } from '../../../services/lineupProtocol';
 import { emptyLayout, type TeamBuilderMode } from '../../../services/teamLayout';
 
 const dnd = vi.hoisted(() => ({
@@ -29,31 +29,36 @@ import TeamBuilder, { TeamBuilderDndProvider } from '../TeamBuilder';
 function setup({
   mode = 'auto',
   unseenHero = false,
-  nothingToFill = false,
   heroes = ['刘备', '关羽'],
-}: { mode?: TeamBuilderMode; unseenHero?: boolean; nothingToFill?: boolean; heroes?: string[] } = {}) {
+  error = null,
+  allocating = false,
+}: {
+  mode?: TeamBuilderMode;
+  unseenHero?: boolean;
+  heroes?: string[];
+  error?: string | null;
+  allocating?: boolean;
+} = {}) {
   const layout = emptyLayout();
   layout[0][0] = { hero: '刘备', skills: ['战法甲', null] };
   const evaluation: LayoutEvaluation = {
-    teams: [
-      { score: 0.52, winChance: 0.6 },
-      { score: null, winChance: 0 },
-      { score: null, winChance: 0 },
-    ],
-    twoOfThree: 0,
-    unseenHeroes: new Set(unseenHero ? ['刘备'] : []),
-    unseenSkills: new Set(),
+    strengths: [0.6, null, null],
+    unknown: { heroes: unseenHero ? ['刘备'] : [], skills: [] },
   };
   const onMove = vi.fn();
   const onRestoreAuto = vi.fn();
   const onFillRemaining = vi.fn();
+  const onRetry = vi.fn();
   render(
     <TeamBuilderDndProvider onMove={onMove}>
       <TeamBuilder
         layout={layout}
         evaluation={evaluation}
         mode={mode}
-        allocating={false}
+        allocating={allocating}
+        progress={0.5}
+        error={error}
+        onRetry={onRetry}
         heroes={heroes}
         skills={['战法甲']}
         placed={{ heroes: new Set(['刘备']), skills: new Set(['战法甲']) }}
@@ -62,20 +67,19 @@ function setup({
         onMove={onMove}
         onRestoreAuto={onRestoreAuto}
         onFillRemaining={onFillRemaining}
-        nothingToFill={nothingToFill}
       />
     </TeamBuilderDndProvider>
   );
-  return { onMove, onRestoreAuto, onFillRemaining };
+  return { onMove, onRestoreAuto, onFillRemaining, onRetry };
 }
 
 describe('TeamBuilder', () => {
-  test('shows three teams with their scores', () => {
+  test('shows three teams with their predicted win rates', () => {
     setup();
     expect(screen.getByRole('region', { name: '队伍编排' })).toBeVisible();
     const team = within(screen.getByTestId('team-builder-team-1'));
-    expect(team.getByText('评分 5.2')).toBeVisible();
     expect(team.getByText('胜率 60%')).toBeVisible();
+    expect(within(screen.getByTestId('team-builder-team-2')).getByText('空')).toBeVisible();
     expect(team.getByRole('button', { name: '队伍一刘备战法1：战法甲' })).toHaveTextContent('战法甲');
     expect(screen.getByText('自动分配')).toBeVisible();
     expect(screen.queryByRole('button', { name: '重置为自动分配' })).not.toBeInTheDocument();
@@ -114,26 +118,36 @@ describe('TeamBuilder', () => {
     expect(onMove).not.toHaveBeenCalled();
   });
 
-  test('offers 重置为自动分配 in manual mode and marks combos without a weight', () => {
+  test('offers 重置为自动分配 in manual mode and marks cards the model has never seen', () => {
     const { onRestoreAuto } = setup({ mode: 'manual', unseenHero: true });
     expect(screen.getByText('已手动调整')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: '重置为自动分配' }));
     expect(onRestoreAuto).toHaveBeenCalled();
-    expect(screen.getByLabelText('未经验证的组合')).toHaveTextContent('未经验证');
+    expect(screen.getByLabelText('模型没见过的卡')).toHaveTextContent('未见过');
+    expect(screen.getByRole('note')).toHaveTextContent('按一张普通的未知卡估算');
+  });
+
+  test('shows how far an allocation has got', () => {
+    setup({ allocating: true });
+    expect(screen.getByRole('status')).toHaveTextContent('正在分配 50%');
+    expect(screen.getByLabelText('正在分配')).toBeVisible();
+  });
+
+  test('reports a failed allocation and retries', () => {
+    const { onRetry } = setup({ error: '网络不可用' });
+    expect(screen.getByRole('alert')).toHaveTextContent('自动分配失败：网络不可用');
+    fireEvent.click(screen.getByRole('button', { name: '重试' }));
+    expect(onRetry).toHaveBeenCalled();
   });
 
   test('fills the remaining slots in manual mode', () => {
     const { onFillRemaining } = setup({ mode: 'manual' });
     fireEvent.click(screen.getByRole('button', { name: '自动分配剩余格子' }));
     expect(onFillRemaining).toHaveBeenCalled();
-    expect(screen.queryByText('剩余卡片没有可用组合')).not.toBeInTheDocument();
   });
 
-  test('disables the fill when nothing is left and explains a fill that found nothing', () => {
+  test('disables the fill when no card is left to place', () => {
     setup({ mode: 'manual', heroes: ['刘备'] });
     expect(screen.getByRole('button', { name: '自动分配剩余格子' })).toHaveAttribute('aria-disabled', 'true');
-    cleanup();
-    setup({ mode: 'manual', nothingToFill: true });
-    expect(screen.getByRole('status')).toHaveTextContent('剩余卡片没有可用组合');
   });
 });

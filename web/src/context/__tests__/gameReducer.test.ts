@@ -1,6 +1,15 @@
 import { gameReducer, initialState } from '../GameContext';
-import type { GameAction } from '../../types/game';
+import type { GameAction, Recommendation } from '../../types/game';
 import { storage } from '../../utils/storage';
+
+const recommending = (index: number): Recommendation => ({
+  recommended_set_index: index,
+  recommended_set: [],
+  analysis: [],
+  model_version: '9:0123456789abcdef',
+  unknown: { heroes: [], skills: [] },
+  round_info: { round_number: 1, round_type: 'hero' },
+});
 
 /**
  * Acceptance tests for gameReducer. In particular they pin down that the
@@ -23,7 +32,7 @@ describe('gameReducer', () => {
     const next = gameReducer({
       ...initialState,
       selectedOptionIndex: 1,
-      currentRecommendation: { recommended_set_index: 1 },
+      currentRecommendation: recommending(1),
     }, {
       type: 'UPDATE_ROUND_INPUT',
       setName: 'set2',
@@ -52,7 +61,7 @@ describe('gameReducer', () => {
         set3: ['战法辛', '战法壬', '战法癸'],
       },
       selectedOptionIndex: 0,
-      currentRecommendation: { recommended_set_index: 0 },
+      currentRecommendation: recommending(0),
       recommendationRosterRevision: 0,
     }, {
       type: 'UPDATE_TEAM',
@@ -62,7 +71,7 @@ describe('gameReducer', () => {
 
     expect(next.currentRoundInputs.set1).toEqual(['战法乙', '战法丙', '战法丁']);
     expect(next.selectedOptionIndex).toBe(0);
-    expect(next.currentRecommendation).toEqual({ recommended_set_index: 0 });
+    expect(next.currentRecommendation).toEqual(recommending(0));
     expect(next.gameState?.current_heroes).toEqual(['刘备', '关羽']);
     expect(next.gameState?.current_skills).toEqual(['战法甲']);
     expect(next.rosterRevision).toBe(1);
@@ -73,15 +82,15 @@ describe('gameReducer', () => {
     const next = gameReducer({
       ...initialState,
       selectedOptionIndex: 2,
-      currentRecommendation: { recommended_set_index: 0 },
+      currentRecommendation: recommending(0),
     }, {
       type: 'RESCORE_RECOMMENDATION',
-      recommendation: { recommended_set_index: 1 },
+      recommendation: recommending(1),
       rosterRevision: 0,
     });
 
     expect(next.selectedOptionIndex).toBe(2);
-    expect(next.currentRecommendation).toEqual({ recommended_set_index: 1 });
+    expect(next.currentRecommendation).toEqual(recommending(1));
     expect(next.recommendationRosterRevision).toBe(next.rosterRevision);
   });
 
@@ -91,7 +100,7 @@ describe('gameReducer', () => {
       rosterRevision: 4,
     }, {
       type: 'SET_RECOMMENDATION',
-      recommendation: { recommended_set_index: 1 },
+      recommendation: recommending(1),
       rosterRevision: 4,
     });
 
@@ -102,7 +111,7 @@ describe('gameReducer', () => {
     const state = {
       ...initialState,
       selectedOptionIndex: 2,
-      currentRecommendation: { recommended_set_index: 0 },
+      currentRecommendation: recommending(0),
       rosterRevision: 5,
       recommendationRosterRevision: 4,
       isLoading: true,
@@ -111,7 +120,7 @@ describe('gameReducer', () => {
     for (const type of ['SET_RECOMMENDATION', 'RESCORE_RECOMMENDATION'] as const) {
       expect(gameReducer(state, {
         type,
-        recommendation: { recommended_set_index: 1 },
+        recommendation: recommending(1),
         rosterRevision: 4,
       })).toBe(state);
     }
@@ -145,7 +154,7 @@ describe('gameReducer', () => {
         set3: ['袁绍', '颜良'],
       },
       selectedOptionIndex: 0,
-      currentRecommendation: { recommended_set_index: 0 },
+      currentRecommendation: recommending(0),
       recommendationRosterRevision: 0,
     };
     const next = gameReducer(state, {
@@ -155,7 +164,7 @@ describe('gameReducer', () => {
 
     expect(next.currentRoundInputs.set1).toEqual(['诸葛亮', '曹操']);
     expect(next.selectedOptionIndex).toBe(0);
-    expect(next.currentRecommendation).toEqual({ recommended_set_index: 0 });
+    expect(next.currentRecommendation).toEqual(recommending(0));
     expect(next.gameState?.support_hero).toBe('曹仁');
     expect(next.rosterRevision).toBe(1);
     expect(next.recommendationRosterRevision).toBe(0);

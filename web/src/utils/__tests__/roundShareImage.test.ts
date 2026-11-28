@@ -30,13 +30,11 @@ describe('getRoundShareImageLayout', () => {
     expect(getRoundShareGroupTitle(2, 1)).toBe('第 3 组');
   });
 
-  test('labels each team with its score and win chance', () => {
+  test('labels each team with its predicted win rate', () => {
     const slots = [{ hero: '刘备', skills: [null, null] as [null, null] }];
-    expect(getRoundShareTeamScoreLines({ slots, score: 0.456, winChance: 0.62 })).toEqual([
-      '评分 4.6',
-      '胜率 62%',
-    ]);
-    expect(getRoundShareTeamScoreLines({ slots: [], score: null, winChance: 0 })).toEqual(['空']);
+    expect(getRoundShareTeamScoreLines({ slots, strength: 0.62 })).toEqual(['胜率 62%']);
+    expect(getRoundShareTeamScoreLines({ slots, strength: null })).toEqual([]);
+    expect(getRoundShareTeamScoreLines({ slots: [], strength: null })).toEqual(['空']);
   });
 
   test('rejects an export without one valid AI recommendation', async () => {

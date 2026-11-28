@@ -10,8 +10,8 @@ const database = JSON.parse(
 const assetManifest = JSON.parse(
   await readFile(new URL('../public/game-assets/manifest.json', import.meta.url), 'utf8'),
 );
-const recommendationData = JSON.parse(
-  await readFile(new URL('../src/recommendation_data.json', import.meta.url), 'utf8'),
+const lineupModel = JSON.parse(
+  await readFile(new URL('../public/game-data/lineup_model.json', import.meta.url), 'utf8'),
 );
 
 const routes = [
@@ -41,48 +41,19 @@ const addProgress = async (context, value) => {
   }, value);
 };
 
+// The cards of the model's most common teams: a roster it has plenty to say about.
 const fullRoster = () => {
-  const { model } = recommendationData;
-  const byHero = new Map();
-  for (const [featureId, weight] of Object.entries(model.weights)) {
-    const [family, source, target] = featureId.split('|');
-    if (
-      !['HP', 'HS'].includes(family) ||
-      weight <= 0 ||
-      (model.support[featureId] ?? 0) < model.min_support_pair
-    ) continue;
-    for (const [focus, other] of [[source, target], [target, source]]) {
-      if (!database.heroes[focus]) continue;
-      const relationships = byHero.get(focus) ?? { hero: [], skill: [] };
-      const otherKind = database.heroes[other] ? 'hero' : 'skill';
-      relationships[otherKind].push({ other, weight });
-      byHero.set(focus, relationships);
-    }
-  }
-  for (const [focus, relationships] of byHero) {
-    relationships.hero.sort((a, b) => b.weight - a.weight);
-    relationships.skill.sort((a, b) => b.weight - a.weight);
-    if (relationships.hero.length < 5 || relationships.skill.length < 5) continue;
-    const selected = [
-      ...relationships.hero.slice(0, 5),
-      ...relationships.skill.slice(0, 5),
-    ];
-    const selectedHeroes = [focus];
-    const selectedSkills = [];
-    for (const { other } of selected) {
-      if (database.heroes[other]) selectedHeroes.push(other);
-      if (database.skills[other]) selectedSkills.push(other);
-    }
-    return {
-      current_heroes: [...new Set(selectedHeroes)],
-      current_skills: [...new Set(selectedSkills)],
-      support_hero: null,
-      support_skills: [],
-      round_number: 6,
-      round_history: [],
-    };
-  }
-  throw new Error('No visual-audit roster has enough supported relationships');
+  const teams = lineupModel.references.slice(0, 4);
+  const cards = (names, ids, catalog) =>
+    [...new Set(ids.map((id) => names[id]))].filter((name) => catalog[name]);
+  return {
+    current_heroes: cards(lineupModel.heroes, teams.flatMap((team) => team.slice(0, 3)), database.heroes),
+    current_skills: cards(lineupModel.skills, teams.flatMap((team) => team.slice(3)), database.skills),
+    support_hero: null,
+    support_skills: [],
+    round_number: 6,
+    round_history: [],
+  };
 };
 
 const inspectPage = async (page, name, errors) => {
@@ -185,6 +156,7 @@ try {
       route: '/',
       viewport,
       seed: progress(fullRoster()),
+      prepare: (page) => page.getByTestId('team-builder-team-1').getByText(/胜率/).waitFor(),
     });
   }
   const roundOneInputs = {
@@ -200,7 +172,7 @@ try {
       seed: progress(roundOneState, roundOneInputs),
       prepare: async (page) => {
         await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-        await page.getByTestId('three-option-grid').waitFor();
+        await page.getByTestId('option-score-0').waitFor();
       },
     });
   }
@@ -212,7 +184,7 @@ try {
     seed: progress(roundOneState, roundOneInputs),
     prepare: async (page) => {
       await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-      await page.getByTestId('three-option-grid').waitFor();
+      await page.getByTestId('option-score-0').waitFor();
       await page.getByRole('button', { name: '展开当前阵容与仓库' }).click();
       await page.getByRole('region', { name: '当前阵容' }).waitFor({ state: 'visible' });
       await page.waitForTimeout(500);
@@ -267,7 +239,7 @@ try {
     seed: progress(roundOneState, roundOneInputs),
     prepare: async (page) => {
       await page.getByRole('button', { name: '推荐支援武将' }).click();
-      await page.getByRole('dialog', { name: '推荐支援武将' }).waitFor();
+      await page.getByRole('dialog', { name: '推荐支援武将' }).getByText('推荐武将：').waitFor();
       await page.waitForTimeout(250);
     },
   });

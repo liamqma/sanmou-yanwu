@@ -1,7 +1,6 @@
 import telemetryRaw from '../../../public/game-data/telemetry_data.json';
 import {
   clearTelemetryDataCacheForTests,
-  getCachedTelemetryData,
   loadTelemetryData,
   parseTelemetryData,
 } from '../telemetryData';
@@ -717,7 +716,7 @@ describe('static telemetry cache recovery', () => {
     expect(firstSignal?.aborted).toBe(true);
     const recovered = await loadTelemetryData();
     expect(recovered.schema.version).toBe(2);
-    expect(getCachedTelemetryData()).toBe(recovered);
+    expect(await loadTelemetryData()).toBe(recovered);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -751,8 +750,9 @@ describe('static telemetry cache recovery', () => {
     settleFirst(responseFor(staleArtifact));
     await staleLoad;
 
-    expect(getCachedTelemetryData()).toBe(active);
-    expect(getCachedTelemetryData()?.summary.invalid_event_count).toBe(
+    const cached = await loadTelemetryData();
+    expect(cached).toBe(active);
+    expect(cached.summary.invalid_event_count).toBe(
       schemaV2Artifact().summary.invalid_event_count
     );
   });

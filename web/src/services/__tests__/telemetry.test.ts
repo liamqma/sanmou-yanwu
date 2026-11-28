@@ -12,11 +12,14 @@ import {
   TELEMETRY_QUEUE_TTL_MS,
 } from '../../utils/telemetryStorage';
 import type { RoundTelemetryInput } from '../../types/telemetry';
-import { recommendationData } from '../../data';
+import { validateRoundEvent } from '../../../functions/api/telemetry/rounds.js';
+import { CATALOG_VERSION } from '../../data';
 
+const MODEL_VERSION = '9:0123456789abcdef';
 const INPUT: RoundTelemetryInput = {
   roundNumber: 1,
   roundType: 'hero',
+  modelVersion: MODEL_VERSION,
   poolBefore: {
     heroes: ['刘备', '关羽', '张飞', '赵云'],
     skills: ['战法一', '战法二'],
@@ -28,7 +31,7 @@ const INPUT: RoundTelemetryInput = {
     ['孙权', '周瑜', '鲁肃'],
     ['袁绍', '颜良', '文丑'],
   ],
-  pairedScores: [18.4, 13.1, 7.8],
+  scores: [-18.4, -23.1, -27.8],
   recommendedIndex: 0,
   chosenIndex: 1,
 };
@@ -56,21 +59,18 @@ describe('round telemetry construction', () => {
       round_type: 'hero',
       recommended_index: 0,
       chosen_index: 1,
+      model_version: MODEL_VERSION,
+      catalog_version: CATALOG_VERSION,
       preference_model_version: null,
       preference_probabilities: null,
     });
-    expect(event?.model_version).toMatch(
-      /^[1-9]\d*:[0-9a-f]{16}:[0-9a-f]{12}$/
-    );
-    expect(event?.model_version.split(':')).toEqual([
-      String(recommendationData.schema.version),
-      recommendationData.battle_counts.corpus_version,
-      recommendationData.model.scoring_version,
-    ]);
+
+    // The Pages Function accepts what the app sends.
+    expect(validateRoundEvent(event)).toBeNull();
 
     INPUT.poolBefore.heroes.push('later mutation');
     INPUT.offeredSets[0].push('later mutation');
-    INPUT.pairedScores[0] = -999;
+    INPUT.scores[0] = -999;
 
     expect(event?.pool_before.heroes).not.toContain('later mutation');
     expect(event?.pool_before).toMatchObject({
@@ -78,15 +78,19 @@ describe('round telemetry construction', () => {
       skills_support: ['战法三', '战法四'],
     });
     expect(event?.offered_sets[0]).not.toContain('later mutation');
-    expect(event?.paired_scores[0]).toBe(18.4);
+    expect(event?.paired_scores[0]).toBe(-18.4);
 
     INPUT.poolBefore.heroes.pop();
     INPUT.offeredSets[0].pop();
-    INPUT.pairedScores[0] = 18.4;
+    INPUT.scores[0] = -18.4;
   });
 
-  test('refuses incomplete score data instead of creating a poison event', () => {
-    expect(createRoundTelemetryEvent({ ...INPUT, pairedScores: [1, 2] })).toBeNull();
+  test('refuses events the telemetry builder would reject', () => {
+    expect(createRoundTelemetryEvent({ ...INPUT, scores: [1, 2] })).toBeNull();
+    expect(createRoundTelemetryEvent({ ...INPUT, scores: [-18.4, NaN, -27.8] })).toBeNull();
+    // The recommended set must have a highest score.
+    expect(createRoundTelemetryEvent({ ...INPUT, recommendedIndex: 1 })).toBeNull();
+    expect(createRoundTelemetryEvent({ ...INPUT, modelVersion: 'lineup-net' })).toBeNull();
   });
 
   test('accepts round 9 and 10 with their repeated offer shapes', () => {
@@ -119,33 +123,6 @@ describe('round telemetry construction', () => {
     ).toBeNull();
     expect(
       createRoundTelemetryEvent({ ...INPUT, roundNumber: 11 })
-    ).toBeNull();
-  });
-
-  test('records the exact displayed preference model and normalized probabilities', () => {
-    const event = createRoundTelemetryEvent({
-      ...INPUT,
-      preferenceModelVersion: 'preference-v1:0000000000000001',
-      preferenceProbabilities: [0.6, 0.3, 0.1],
-    });
-
-    expect(event).toMatchObject({
-      preference_model_version: 'preference-v1:0000000000000001',
-      preference_probabilities: [0.6, 0.3, 0.1],
-    });
-    expect(
-      createRoundTelemetryEvent({
-        ...INPUT,
-        preferenceModelVersion: 'preference-v1:0000000000000001',
-        preferenceProbabilities: [0.6, 0.3, 0.2],
-      })
-    ).toBeNull();
-    expect(
-      createRoundTelemetryEvent({
-        ...INPUT,
-        preferenceModelVersion: 'preference-v1',
-        preferenceProbabilities: [0.6, 0.3, 0.1],
-      })
     ).toBeNull();
   });
 

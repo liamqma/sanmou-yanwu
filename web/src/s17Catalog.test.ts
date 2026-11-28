@@ -1,4 +1,4 @@
-import { database, recommendationData } from './data';
+import { database, defaultSkill } from './data';
 import { getGameAsset } from './gameAssets';
 import { api } from './services/api';
 
@@ -18,7 +18,7 @@ describe('S17 catalog', () => {
       expect(items.regularSkills).not.toContain(signature);
       expect(getGameAsset(hero, 'hero')?.quality).toBe('orange');
       expect(getGameAsset(signature, 'tactic')).toBeNull();
-      expect(recommendationData.catalog.default_skill[hero]).toBe(signature);
+      expect(defaultSkill[hero]).toBe(signature);
     }
     for (const skill of ['保境安民', '随机应变']) {
       expect(items.orangeRegularSkills).toContain(skill);

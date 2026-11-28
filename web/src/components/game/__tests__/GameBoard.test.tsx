@@ -21,10 +21,7 @@ const mocks = vi.hoisted(() => {
         set3: ['诸葛亮', '庞统', '黄忠'],
       },
       selectedOptionIndex: 1,
-      currentRecommendation: {
-        recommended_set_index: 1,
-        analysis: [],
-      } as { recommended_set_index: number; analysis: never[] } | null,
+      currentRecommendation: null as Record<string, unknown> | null,
       rosterRevision: 0,
       recommendationRosterRevision: 0 as number | null,
       availableHeroes: [],
@@ -35,15 +32,7 @@ const mocks = vi.hoisted(() => {
     },
     dispatch: vi.fn(),
     recordRoundTelemetry: vi.fn(),
-    getRecommendation: vi.fn(async () => ({
-      success: true,
-      recommendation: {
-        recommended_set_index: 2,
-        recommended_set: [],
-        analysis: [],
-        preference: null,
-      },
-    })),
+    getRecommendation: vi.fn(),
     copyImageToClipboard: vi.fn(async () => true),
     renderRoundShareImage: vi.fn(async () =>
       new Blob(['png'], { type: 'image/png' })
@@ -61,8 +50,22 @@ vi.mock('../../../services/telemetry', () => ({
   recordRoundTelemetry: mocks.recordRoundTelemetry,
 }));
 vi.mock('../../../utils/clipboard', () => ({
-  copyToClipboard: vi.fn(async () => true),
   copyImageToClipboard: mocks.copyImageToClipboard,
+}));
+vi.mock('../../../hooks/useTeamBuilder', () => ({
+  useTeamBuilder: () => ({
+    layout: [],
+    mode: 'auto',
+    allocating: false,
+    progress: 0,
+    error: null,
+    retry: vi.fn(),
+    evaluation: { strengths: [null, null, null], unknown: { heroes: [], skills: [] } },
+    placed: { heroes: new Set(), skills: new Set() },
+    move: vi.fn(),
+    restoreAuto: vi.fn(),
+    fillRemaining: vi.fn(),
+  }),
 }));
 vi.mock('../../../utils/roundShareImage', () => ({
   renderRoundShareImage: mocks.renderRoundShareImage,
@@ -82,20 +85,22 @@ vi.mock('../TeamBuilder', () => ({
 vi.mock('../../common/ResponsiveDisclosure', () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
-vi.mock('../../../services/recommendationDebug', () => ({
-  SANMOU_DEBUG_SCHEMA: 'test',
-  buildRoundRecommendationDebugContext: vi.fn(() => ({})),
-  registerSanmouDebugContext: vi.fn(() => () => {}),
-}));
 
+const MODEL_VERSION = '9:0123456789abcdef';
+
+/** A recommendation whose best set scores -20 and the others one point less each. */
 const recommendationResponse = (recommendedSetIndex: number) => ({
-  success: true,
-  recommendation: {
-    recommended_set_index: recommendedSetIndex,
-    recommended_set: [],
-    analysis: [],
-    preference: null,
-  },
+  recommended_set_index: recommendedSetIndex,
+  recommended_set: [],
+  analysis: [0, 1, 2].map((index) => ({
+    set_index: index,
+    score: -20 - Math.abs(index - recommendedSetIndex),
+    gap: -Math.abs(index - recommendedSetIndex),
+    teams: [],
+  })),
+  model_version: MODEL_VERSION,
+  unknown: { heroes: [], skills: [] },
+  round_info: { round_number: 1, round_type: 'hero' },
 });
 
 const deferredRecommendation = () => {
@@ -128,10 +133,7 @@ describe('GameBoard roster rescoring', () => {
       support_skills: [],
       round_number: 1,
     };
-    mocks.state.currentRecommendation = {
-      recommended_set_index: 1,
-      analysis: [],
-    };
+    mocks.state.currentRecommendation = recommendationResponse(1);
     mocks.state.rosterRevision = 0;
     mocks.state.recommendationRosterRevision = 0;
     mocks.copyImageToClipboard.mockResolvedValue(true);
@@ -160,6 +162,7 @@ describe('GameBoard roster rescoring', () => {
           mocks.state.currentRoundInputs.set3,
         ],
         expect.objectContaining({ support_hero: '曹仁' }),
+        expect.any(Function),
       );
     });
     await waitFor(() => {
@@ -278,6 +281,45 @@ describe('GameBoard roster rescoring', () => {
     );
   });
 
+  test('records the model scores and version with a confirmed choice', () => {
+    render(<GameBoard />);
+
+    fireEvent.click(screen.getByRole('button', { name: '确认选择并进入下一轮' }));
+
+    expect(mocks.recordRoundTelemetry).toHaveBeenCalledWith({
+      roundNumber: 1,
+      roundType: 'hero',
+      modelVersion: MODEL_VERSION,
+      poolBefore: { heroes: ['刘备', '关羽', '张飞', '赵云'], skills: ['战法甲'] },
+      offeredSets: [
+        ['曹操', '孙权', '袁绍'],
+        ['周瑜', '陆逊', '吕蒙'],
+        ['诸葛亮', '庞统', '黄忠'],
+      ],
+      scores: [-21, -20, -21],
+      recommendedIndex: 1,
+      chosenIndex: 1,
+    });
+    expect(mocks.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'RECORD_CHOICE', setIndex: 1 })
+    );
+  });
+
+  test('shows how far the analysis has got', async () => {
+    const pending = deferredRecommendation();
+    mocks.getRecommendation.mockImplementationOnce(
+      (_type: string, _sets: string[][], _state: unknown, onProgress: (done: number) => void) => {
+        onProgress(0.5);
+        return pending.promise;
+      }
+    );
+    render(<GameBoard />);
+
+    fireEvent.click(screen.getByRole('button', { name: '重新分析' }));
+
+    expect(await screen.findByText('分析中 50%')).toBeVisible();
+  });
+
   test('recalculates a dirty recommendation on a newly mounted game route', async () => {
     mocks.state.rosterRevision = 1;
     mocks.state.recommendationRosterRevision = 0;
@@ -293,6 +335,7 @@ describe('GameBoard roster rescoring', () => {
           mocks.state.currentRoundInputs.set3,
         ],
         mocks.state.gameState,
+        expect.any(Function),
       );
     });
     await waitFor(() => {

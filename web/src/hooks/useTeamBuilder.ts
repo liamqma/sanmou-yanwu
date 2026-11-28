@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { recommendationData } from '../data';
-import { allocateTeams, evaluateLayout, fillTeams } from '../services/teamAllocation';
-import type { TeamFormationWorkerResponse } from '../services/teamFormationWorkerProtocol';
+import { defaultSkill } from '../data';
+import { LineupSuperseded, runLineup } from '../services/lineupClient';
+import type { LayoutEvaluation } from '../services/lineupProtocol';
 import {
   applyMove,
   emptyLayout,
+  layoutCards,
+  layoutFromTeams,
   layoutPoolKey,
   normalizeLayout,
   parseStoredTeamBuilder,
@@ -17,8 +19,11 @@ import {
 } from '../services/teamLayout';
 import { storage } from '../utils/storage';
 
-const defaultSkill = recommendationData.catalog.default_skill;
 const autoLayouts = new Map<string, TeamLayout>();
+const NOT_EVALUATED: LayoutEvaluation = {
+  strengths: [null, null, null],
+  unknown: { heroes: [], skills: [] },
+};
 
 interface State {
   mode: TeamBuilderMode;
@@ -35,70 +40,57 @@ function initialState(heroes: string[], skills: string[], poolKey: string): Stat
   return { mode: stored.mode, poolKey: current ? poolKey : '', layout };
 }
 
-function createWorker(): Worker | null {
-  if (typeof Worker === 'undefined') return null;
-  try {
-    return new Worker(new URL('../workers/teamFormation.worker.ts', import.meta.url), {
-      type: 'module',
-    });
-  } catch {
-    return null;
-  }
-}
-
-/** Three-team layout for the pool: auto-allocated until the user moves something. */
+/** Three-team layout for the pool: allocated by the lineup model until the user moves something. */
 export function useTeamBuilder(heroes: string[], skills: string[]) {
   const poolKey = layoutPoolKey(heroes, skills);
   const [state, setState] = useState<State>(() => initialState(heroes, skills, poolKey));
   const [allocating, setAllocating] = useState(false);
-  // The layout a fill could not add anything to.
-  const [unfillable, setUnfillable] = useState<TeamLayout | null>(null);
-  const workerRef = useRef<Worker | null | undefined>(undefined);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [evaluated, setEvaluated] = useState<{ layout: TeamLayout; value: LayoutEvaluation } | null>(null);
   const requestRef = useRef(0);
 
-  useEffect(() => () => workerRef.current?.terminate(), []);
+  useEffect(
+    () => () => {
+      requestRef.current++;
+    },
+    []
+  );
+
+  // While auto mode waits for the new pool's teams, show the old ones without cards that left.
+  const layout = useMemo(
+    () =>
+      state.poolKey === poolKey
+        ? state.layout
+        : normalizeLayout(state.layout, heroes, skills, defaultSkill),
+    [state.layout, state.poolKey, poolKey]
+  );
 
   /** Allocate from scratch, or fill `start`, in the worker. Only the latest request finishes. */
   const run = useCallback(
     (start: TeamLayout | undefined, done: (layout: TeamLayout) => void) => {
       const requestId = ++requestRef.current;
-      let timer: number | undefined;
-      const finish = (layout: TeamLayout) => {
-        if (requestId !== requestRef.current) return;
-        setAllocating(false);
-        done(layout);
-      };
-      const runHere = () => {
-        timer = window.setTimeout(
-          () =>
-            finish(
-              start
-                ? fillTeams(start, heroes, skills, recommendationData)
-                : allocateTeams(heroes, skills, recommendationData)
-            ),
-          0
-        );
-      };
-
       setAllocating(true);
-      if (workerRef.current === undefined) workerRef.current = createWorker();
-      const worker = workerRef.current;
-      if (!worker) {
-        runHere();
-      } else {
-        worker.onmessage = ({ data }: MessageEvent<TeamFormationWorkerResponse>) => {
-          if (data.requestId !== requestId) return;
-          if ('layout' in data) finish(data.layout);
-          else runHere();
-        };
-        worker.onerror = () => {
-          worker.terminate();
-          workerRef.current = null;
-          runHere();
-        };
-        worker.postMessage({ requestId, heroes, skills, layout: start });
-      }
-      return () => window.clearTimeout(timer);
+      setProgress(0);
+      setError(null);
+      (start
+        ? runLineup('fill', { ...layoutCards(start), heroes, skills })
+        : runLineup('lineup', { heroes, skills }, (done) => {
+            if (requestId === requestRef.current) setProgress(done);
+          })
+      ).then(
+        ({ teams }) => {
+          if (requestId !== requestRef.current) return;
+          setAllocating(false);
+          done(layoutFromTeams(teams, !start));
+        },
+        (failure: Error) => {
+          if (requestId !== requestRef.current || failure instanceof LineupSuperseded) return;
+          setAllocating(false);
+          setError(failure.message);
+        }
+      );
     },
     [heroes, skills]
   );
@@ -118,11 +110,13 @@ export function useTeamBuilder(heroes: string[], skills: string[]) {
       setState({ mode: 'auto', poolKey, layout: cached });
       return;
     }
-    return run(undefined, (layout) => {
-      autoLayouts.set(poolKey, layout);
-      setState((current) => (current.mode === 'auto' ? { mode: 'auto', poolKey, layout } : current));
+    run(undefined, (allocated) => {
+      autoLayouts.set(poolKey, allocated);
+      setState((current) =>
+        current.mode === 'auto' ? { mode: 'auto', poolKey, layout: allocated } : current
+      );
     });
-  }, [poolKey, state.mode, state.poolKey]);
+  }, [poolKey, state.mode, state.poolKey, attempt]);
 
   useEffect(() => {
     storage.saveTeamBuilder({
@@ -133,15 +127,30 @@ export function useTeamBuilder(heroes: string[], skills: string[]) {
     });
   }, [state]);
 
+  useEffect(() => {
+    let current = true;
+    runLineup('evaluate', layoutCards(layout)).then(
+      (value) => {
+        if (current) setEvaluated({ layout, value });
+      },
+      () => {
+        // Superseded by a newer layout, or the model is unavailable: allocation reports that.
+      }
+    );
+    return () => {
+      current = false;
+    };
+  }, [layout]);
+
   const move = useCallback(
     (source: MoveSource, target: MoveTarget) => {
-      const layout = applyMove(state.layout, source, target, defaultSkill);
-      if (layout === state.layout) return;
+      const moved = applyMove(layout, source, target, defaultSkill);
+      if (moved === layout) return;
       requestRef.current++;
       setAllocating(false);
-      setState({ mode: 'manual', poolKey: state.poolKey, layout });
+      setState({ mode: 'manual', poolKey, layout: moved });
     },
-    [state]
+    [layout, poolKey]
   );
 
   const restoreAuto = useCallback(() => {
@@ -149,30 +158,25 @@ export function useTeamBuilder(heroes: string[], skills: string[]) {
   }, []);
 
   const fillRemaining = useCallback(() => {
-    const start = state.layout;
-    const before = placedItems(start);
-    run(start, (layout) => {
-      const after = placedItems(layout);
-      if (after.heroes.size + after.skills.size === before.heroes.size + before.skills.size) {
-        setUnfillable(start);
-        return;
-      }
-      setState((current) => (current.layout === start ? { ...current, layout } : current));
+    const start = layout;
+    run(start, (filled) => {
+      setState((current) => (current.layout === start ? { ...current, layout: filled } : current));
     });
-  }, [run, state.layout]);
+  }, [run, layout]);
 
-  const evaluation = useMemo(() => evaluateLayout(state.layout, recommendationData), [state.layout]);
-  const placed = useMemo(() => placedItems(state.layout), [state.layout]);
+  const placed = useMemo(() => placedItems(layout), [layout]);
 
   return {
-    layout: state.layout,
+    layout,
     mode: state.mode,
     allocating,
-    evaluation,
+    progress,
+    error,
+    retry: useCallback(() => setAttempt((count) => count + 1), []),
+    evaluation: evaluated?.layout === layout ? evaluated.value : NOT_EVALUATED,
     placed,
     move,
     restoreAuto,
     fillRemaining,
-    nothingToFill: unfillable === state.layout,
   };
 }

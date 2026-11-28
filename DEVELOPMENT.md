@@ -15,7 +15,7 @@ Run only the tests for the areas you changed.
 | Changed paths | Tests |
 |---|---|
 | `web/**` | From `web/`: `pnpm typecheck`, `pnpm test`, and `pnpm build`. Add `pnpm test:e2e` when the change affects UI flow or rendered behavior (first run: `pnpm exec playwright install`). |
-| `data/**` | `make test-data`. For recommendation changes, also run `make build-recommendation`, plus `make evaluate-recommendation` when evaluation logic or model configuration changes. For telemetry changes, run `make build-telemetry EXPORT=<D1 SQL export>`; the empty migration is a safe local input. |
+| `data/**` | `make test-data`. For lineup-model changes, also run `make test-lineup`, then `make export-lineup` and the web tests, which compare the browser implementation with the exported fixtures. For telemetry changes, run `make build-telemetry EXPORT=<D1 SQL export>`; the empty migration is a safe local input. |
 | Markdown only | Nothing to run. |
 
 - Fresh checkouts need `pnpm install --frozen-lockfile` in `web/` and

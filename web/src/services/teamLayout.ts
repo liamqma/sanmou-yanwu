@@ -1,6 +1,9 @@
+import type { LayoutCards } from './lineupProtocol';
+import type { TeamView } from './lineupSearch';
+
 export const TEAM_COUNT = 3;
 export const TEAM_SIZE = 3;
-export const TEAM_BUILDER_STORAGE_VERSION = 3;
+export const TEAM_BUILDER_STORAGE_VERSION = 4;
 
 export interface TeamSlot {
   hero: string | null;
@@ -46,6 +49,29 @@ export const cloneLayout = (layout: TeamLayout): TeamLayout =>
   layout.map((team) =>
     team.map((slot) => ({ hero: slot.hero, skills: [slot.skills[0], slot.skills[1]] }))
   );
+
+/** The layout as the lineup model takes it: 9 hero slots and 18 skill slots, '' for empty. */
+export const layoutCards = (layout: TeamLayout): LayoutCards => ({
+  layoutHeroes: layout.flatMap((team) => team.map((slot) => slot.hero ?? '')),
+  layoutSkills: layout.flatMap((team) =>
+    team.flatMap((slot) => slot.skills.map((skill) => skill ?? ''))
+  ),
+});
+
+/** Layout of the model's teams, optionally strongest team first. */
+export function layoutFromTeams(teams: TeamView[], strongestFirst: boolean): TeamLayout {
+  const ordered = strongestFirst
+    ? [...teams].sort((a, b) => (b.strength ?? -1) - (a.strength ?? -1))
+    : teams;
+  return ordered.map((team) =>
+    team.heroes.map((hero, slot) => ({
+      hero: hero || null,
+      skills: hero
+        ? [team.skills[2 * slot] || null, team.skills[2 * slot + 1] || null]
+        : [null, null],
+    }))
+  );
+}
 
 export const layoutPoolKey = (heroes: string[], skills: string[]): string =>
   JSON.stringify([[...new Set(heroes)].sort(), [...new Set(skills)].sort()]);

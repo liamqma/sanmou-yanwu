@@ -4,81 +4,11 @@ const {
   heroesWithMeta, heroChipLabel, rankedSkills, skillChipLabel, anySkills,
 } = require('./helpers');
 
-// Acceptance tests for the labels added to 选项分析 (option analysis):
-//   - hero rounds: each candidate hero chip shows `名 · 档位`
-//   - skill rounds: ranked candidate chips show `名 · 档位`
-// See web/src/components/game/AnalysisGrid.js (itemChipLabel).
-//
-// Labels must appear ONLY inside 选项分析 — the rest of the app (team chips,
-// autocomplete, setup form) was intentionally left showing bare names.
+// 选项分析 (option analysis): the lineup model's verdict per offered set, and
+// the `名 · 档位` labels on candidate chips. Labels appear only inside 选项分析;
+// team chips, autocomplete and the setup form show bare names.
 
-test.describe('选项分析 — hero & skill labels', () => {
-  test('sanmouDebug exports not-ready and exact recommendation contexts', async ({ page }) => {
-    const team = heroesWithMeta.slice(0, 4);
-    const candidates = heroesWithMeta.slice(4, 13);
-    await seedGame(
-      page,
-      makeGameState({ roundNumber: 1, heroes: team, skills: anySkills(8) }),
-      {
-        set1: candidates.slice(0, 3),
-        set2: candidates.slice(3, 6),
-        set3: candidates.slice(6, 9),
-      },
-    );
-
-    const before = await page.evaluate(() => JSON.parse(window.sanmouDebug()));
-    expect(before).toMatchObject({
-      page: 'candidate-suggestion',
-      status: 'not-ready',
-    });
-
-    await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-    await expect(page.getByText('选项分析')).toBeVisible({ timeout: 15000 });
-    const after = await page.evaluate(() => JSON.parse(window.sanmouDebug()));
-    expect(after).toMatchObject({
-      schema: 'sanmou-recommendation-debug/v1',
-      page: 'candidate-suggestion',
-      status: 'ready',
-    });
-    expect(after.options).toHaveLength(3);
-    expect(after.decision.ranking).toHaveLength(3);
-    expect(after.options[0].score_calculation.length).toBeGreaterThan(0);
-    expect(after.model).not.toHaveProperty('weights');
-  });
-
-  test('successful round-prompt copies record the GA event without prompt data', async ({
-    page,
-    context,
-  }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    const team = heroesWithMeta.slice(0, 4);
-    const candidates = heroesWithMeta.slice(4, 13);
-
-    await seedGame(
-      page,
-      makeGameState({ roundNumber: 1, heroes: team, skills: anySkills(8) }),
-      {
-        set1: candidates.slice(0, 3),
-        set2: candidates.slice(3, 6),
-        set3: candidates.slice(6, 9),
-      },
-    );
-
-    await page.getByRole('button', { name: '复制 AI 分析提示词' }).click();
-    await expect(page.getByText('提示词已复制到剪贴板')).toBeVisible();
-
-    const analyticsEvents = await page.evaluate(() =>
-      (window.dataLayer || [])
-        .filter((entry) => entry?.[0] === 'event')
-        .map((entry) => [entry[0], entry[1], entry.length])
-    );
-    expect(analyticsEvents).toContainEqual([
-      'event',
-      'copy_round_analysis_prompt',
-      2,
-    ]);
-  });
-
+test.describe('选项分析', () => {
   test('desktop: all three option sets share one horizontal row', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const team = heroesWithMeta.slice(0, 4);
@@ -100,7 +30,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     expect(boxes[1].x).toBeLessThan(boxes[2].x);
   });
 
-  test('score comparison: current roster score + per-option 评分, no 火力', async ({ page }) => {
+  test('each option shows its gap to the best set and the lineup it leads to', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const team = heroesWithMeta.slice(0, 4);
     const candidates = heroesWithMeta.slice(4, 13);
@@ -111,38 +41,32 @@ test.describe('选项分析 — hero & skill labels', () => {
       { set1: candidates.slice(0, 3), set2: candidates.slice(3, 6), set3: candidates.slice(6, 9) },
     );
 
-    // The 当前阵容 heading keeps the roster score beside it before any AI request.
-    const rosterScore = page.getByTestId('current-roster-score');
-    await expect(rosterScore).toBeVisible({ timeout: 15000 });
-    await expect(rosterScore).toHaveText(/评分 -?\d+\.\d/);
-
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+    const cards = page.getByTestId('analysis-set-card');
+    await expect(page.getByTestId('option-score-0')).toBeVisible({ timeout: 60000 });
 
-    // Each option card shows a signed one-decimal 评分.
+    // Exactly one set is recommended, and it is a best one.
+    const recommended = page.locator('[data-testid="analysis-set-card"][data-ai-recommended="true"]');
+    await expect(recommended).toHaveCount(1);
+    await expect(recommended.locator('[data-testid^="option-score-"]')).toHaveText('最优');
     for (const i of [0, 1, 2]) {
-      const optionScore = page.getByTestId(`option-score-${i}`);
-      await expect(optionScore).toBeVisible();
-      await expect(optionScore).toHaveText(/评分：[+−]\d+\.\d/);
+      await expect(page.getByTestId(`option-score-${i}`)).toHaveText(/^(最优|比最优低\d+\.\d)$/);
+      await expect(page.getByTestId(`option-strengths-${i}`)).toHaveText(
+        /^选后三队胜率 (\d+%|—) \/ (\d+%|—) \/ (\d+%|—)$/
+      );
+      // The lineup after the pick fields the offered heroes, in bold.
+      const lineup = cards.nth(i).getByTestId('option-lineup');
+      await expect(lineup).toContainText('队伍一');
+      const offered = candidates.slice(3 * i, 3 * i + 3);
+      const bold = await lineup.locator('strong').allTextContents();
+      expect(bold.length).toBeGreaterThan(0);
+      expect(bold.every((name) => offered.includes(name))).toBe(true);
     }
 
-    // Candidate rows stay visible without a misleading additive heading.
-    await expect(page.getByText('单项加分:')).toHaveCount(0);
-
-    // The standalone fire baseline panel and all fire bars are gone.
-    await expect(page.getByTestId('fire-baseline-card')).toHaveCount(0);
-    await expect(page.getByTestId('fire-bar-current')).toHaveCount(0);
-    await expect(page.getByTestId('fire-bar-option-0')).toHaveCount(0);
-    await expect(page.getByTestId('fire-bar-option-1')).toHaveCount(0);
-    await expect(page.getByTestId('fire-bar-option-2')).toHaveCount(0);
-
-    // No 火力 terminology anywhere, and removed blocks/wording are absent.
-    await expect(page.getByText(/火力/)).toHaveCount(0);
-    await expect(page.getByText('当前阵容火力')).toHaveCount(0);
-    await expect(page.getByText('选择后火力')).toHaveCount(0);
-    await expect(page.getByText('本轮增加')).toHaveCount(0);
-    await expect(page.getByText('推荐理由:')).toHaveCount(0);
-    await expect(page.getByText('可能减分项:')).toHaveCount(0);
-    await expect(page.getByText(/项特征/)).toHaveCount(0);
+    // What the old model showed is gone.
+    await expect(page.getByTestId('current-roster-score')).toHaveCount(0);
+    await expect(page.getByText(/单项|玩家选择概率/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '复制 AI 分析提示词' })).toHaveCount(0);
   });
 
   test('hero round: candidate chips show hero ranking', async ({ page }) => {

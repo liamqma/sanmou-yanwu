@@ -36,6 +36,9 @@ venv.bak/
 # Verified, regenerable external Yanwu release corpus
 .cache/yanwu/
 
+# Trained lineup models
+.cache/lineup-net/
+
 # pnpm (only used when a local store is explicitly selected)
 .pnpm-store/
 
